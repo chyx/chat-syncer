@@ -56,10 +56,11 @@ create table if not exists public.chat_logs (
 -- Indexes for better performance
 create index if not exists chat_logs_created_at_idx on public.chat_logs (created_at desc);
 create index if not exists chat_logs_chat_id_idx on public.chat_logs (chat_id);
+create index if not exists chat_logs_gin_msgs on public.chat_logs using gin (messages);
 
 -- Enable RLS and allow anonymous inserts only
 alter table public.chat_logs enable row level security;
-create policy if not exists "anon can insert" on public.chat_logs
+create policy "anon can insert" on public.chat_logs
   for insert to anon with check (true);
 ```
 
@@ -76,6 +77,31 @@ Each synced conversation is stored as a single row containing:
 - Uses Supabase anonymous key (public, RLS-protected)
 - Only allows INSERT operations from web clients
 - No sensitive data is exposed in the userscript
+
+## Table Schema Details
+
+The `chat_logs` table structure:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key, auto-generated |
+| `created_at` | timestamptz | Record creation timestamp |
+| `collected_at` | timestamptz | When conversation was captured |
+| `chat_id` | text | ChatGPT conversation ID |
+| `chat_url` | text | Full URL of the conversation |
+| `chat_title` | text | Conversation title |
+| `page_title` | text | HTML page title |
+| `messages` | jsonb | Array of conversation messages |
+| `meta` | jsonb | Client metadata (UA, source, etc.) |
+
+### Indexes Created
+- `chat_logs_created_at_idx`: B-tree on created_at (DESC) for time-based queries
+- `chat_logs_chat_id_idx`: B-tree on chat_id for conversation lookups
+- `chat_logs_gin_msgs`: GIN index on messages JSONB for full-text search
+
+### Security Policies
+- RLS enabled with anonymous insert-only access
+- Prevents unauthorized data access while allowing sync operations
 
 ## Development
 
