@@ -98,19 +98,134 @@
         },
 
         promptConfig() {
-            const url = prompt('请输入 Supabase URL (例如: https://xxx.supabase.co):', '');
-            if (!url) return false;
-            
-            const key = prompt('请输入 Supabase 匿名密钥:', '');
-            if (!key) return false;
-            
-            const table = prompt('请输入表名 (默认: chat_logs):', 'chat_logs');
-            
-            CONFIG.set('SUPABASE_URL', url.replace(/\/$/, ''));
-            CONFIG.set('SUPABASE_ANON_KEY', key);
-            CONFIG.set('TABLE_NAME', table || 'chat_logs');
-            
-            return true;
+            return new Promise((resolve) => {
+                this.showConfigModal(resolve);
+            });
+        },
+
+        showConfigModal(callback) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10002;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 500px;
+                width: 90%;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                max-height: 80vh;
+                overflow-y: auto;
+            `;
+
+            modal.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h2 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">配置 Supabase 连接</h2>
+                    <p style="margin: 0; font-size: 14px; color: #6b7280;">请填入您的 Supabase 项目信息</p>
+                </div>
+
+                <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; line-height: 1.5;">
+                    <strong>📋 如何获取 Supabase 密钥：</strong><br>
+                    1. 登录 <a href="https://supabase.com" target="_blank" style="color: #10a37f;">Supabase</a> 并进入您的项目<br>
+                    2. 在左侧菜单点击 "Settings" → "API"<br>
+                    3. 复制 "Project URL" 和 "anon public" 密钥<br>
+                    4. 确保在 "Authentication" → "Policies" 中设置了正确的 RLS 策略
+                </div>
+
+                <form id="supabaseConfigForm">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                            Supabase URL *
+                        </label>
+                        <input type="url" id="supabaseUrl" placeholder="https://your-project.supabase.co" 
+                               style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+                               value="${CONFIG.get('SUPABASE_URL') || ''}" required>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                            匿名密钥 (anon key) *
+                        </label>
+                        <textarea id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." rows="3"
+                                  style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; resize: vertical; box-sizing: border-box;"
+                                  required>${CONFIG.get('SUPABASE_ANON_KEY') || ''}</textarea>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">
+                            表名
+                        </label>
+                        <input type="text" id="tableName" placeholder="chat_logs" 
+                               style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;"
+                               value="${CONFIG.get('TABLE_NAME') || 'chat_logs'}">
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" id="cancelConfig" 
+                                style="padding: 10px 16px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                            取消
+                        </button>
+                        <button type="submit" id="saveConfig"
+                                style="padding: 10px 16px; border: none; background: #10a37f; color: white; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                            保存配置
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const form = modal.querySelector('#supabaseConfigForm');
+            const cancelBtn = modal.querySelector('#cancelConfig');
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const url = document.getElementById('supabaseUrl').value.trim();
+                const key = document.getElementById('supabaseKey').value.trim();
+                const table = document.getElementById('tableName').value.trim() || 'chat_logs';
+
+                if (!url || !key) {
+                    alert('请填写 URL 和密钥');
+                    return;
+                }
+
+                CONFIG.set('SUPABASE_URL', url.replace(/\/$/, ''));
+                CONFIG.set('SUPABASE_ANON_KEY', key);
+                CONFIG.set('TABLE_NAME', table);
+
+                document.body.removeChild(overlay);
+                callback(true);
+            });
+
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+                callback(false);
+            });
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                    callback(false);
+                }
+            });
+
+            setTimeout(() => {
+                document.getElementById('supabaseUrl').focus();
+            }, 100);
         }
     };
 
@@ -236,7 +351,8 @@
             try {
                 // 检查配置
                 if (!CONFIG.get('SUPABASE_URL') || !CONFIG.get('SUPABASE_ANON_KEY')) {
-                    if (!UI.promptConfig()) {
+                    const configResult = await UI.promptConfig();
+                    if (!configResult) {
                         UI.showStatus('配置取消', 'error');
                         return;
                     }

@@ -75,23 +75,83 @@ function createMockBrowser() {
         title: 'Test ChatGPT Conversation | ChatGPT',
         readyState: 'complete',
         createElement: function(tag) {
-            return {
+            const element = {
                 style: {},
                 onclick: null,
                 innerHTML: '',
                 textContent: '',
+                tagName: tag.toUpperCase(),
+                children: [],
+                parentNode: null,
                 setAttribute: function() {},
                 getAttribute: function() { return null; },
-                appendChild: function() {},
-                remove: function() {},
+                appendChild: function(child) {
+                    this.children.push(child);
+                    child.parentNode = this;
+                },
+                removeChild: function(child) {
+                    const index = this.children.indexOf(child);
+                    if (index > -1) {
+                        this.children.splice(index, 1);
+                        child.parentNode = null;
+                    }
+                },
+                remove: function() {
+                    if (this.parentNode) {
+                        this.parentNode.removeChild(this);
+                    }
+                },
                 classList: {
                     add: function() {},
                     remove: function() {}
-                }
+                },
+                querySelector: function(selector) {
+                    // Mock for testing form elements
+                    if (selector === '#supabaseConfigForm') return { addEventListener: function() {} };
+                    if (selector === '#cancelConfig') return { addEventListener: function() {} };
+                    return null;
+                },
+                addEventListener: function() {},
+                focus: function() {}
             };
+            
+            // Mock specific elements for modal testing
+            if (tag === 'input' || tag === 'textarea') {
+                element.value = '';
+                element.required = false;
+                element.placeholder = '';
+            }
+            
+            return element;
         },
         body: {
-            appendChild: function() {}
+            children: [],
+            appendChild: function(child) {
+                this.children.push(child);
+                child.parentNode = this;
+            },
+            removeChild: function(child) {
+                const index = this.children.indexOf(child);
+                if (index > -1) {
+                    this.children.splice(index, 1);
+                    child.parentNode = null;
+                }
+            }
+        },
+        getElementById: function(id) {
+            // Mock form elements for testing
+            const mockElement = {
+                value: '',
+                addEventListener: function() {},
+                focus: function() {},
+                trim: function() { return this.value.trim(); }
+            };
+            
+            if (id === 'supabaseUrl') mockElement.value = 'https://test.supabase.co';
+            if (id === 'supabaseKey') mockElement.value = 'test-anon-key-123';
+            if (id === 'tableName') mockElement.value = 'chat_logs';
+            
+            return mockElement;
         },
         querySelectorAll: function(selector) {
             // 模拟 ChatGPT 消息元素
@@ -302,9 +362,74 @@ function runTests() {
     assertEqual(syncButton.innerHTML, 'Sync → Supabase', '按钮文本正确');
     assertNotNull(syncButton.style, '按钮样式存在');
     
+    // 测试配置模态框
+    assertType(UI.promptConfig, 'function', 'UI.promptConfig 是函数');
+    assertType(UI.showConfigModal, 'function', 'UI.showConfigModal 是函数');
+    
+    // 测试模态框创建（同步测试，因为模态框是同步创建的）
+    let modalCreated = false;
+    let modalCallback = null;
+    
+    // Mock the showConfigModal to capture if it was called correctly
+    const originalShowConfigModal = UI.showConfigModal;
+    UI.showConfigModal = function(callback) {
+        modalCreated = true;
+        modalCallback = callback;
+        // 模拟用户点击保存
+        setTimeout(() => {
+            if (callback) callback(true);
+        }, 0);
+    };
+    
+    // 测试 promptConfig 返回 Promise
+    const configPromise = UI.promptConfig();
+    assert(configPromise instanceof Promise, 'promptConfig 返回 Promise');
+    
+    // 恢复原始函数
+    UI.showConfigModal = originalShowConfigModal;
+    
     console.log();
     
-    // 5. Supabase 集成测试
+    // 5. 模态框功能测试
+    console.log(colors.yellow, '🪟 测试模态框功能', colors.reset);
+    
+    // 测试模态框 DOM 结构创建
+    let testModalCallback = null;
+    let modalOverlay = null;
+    
+    // Mock body.appendChild to capture modal creation
+    const originalAppendChild = document.body.appendChild;
+    document.body.appendChild = function(element) {
+        if (element.style && element.style.cssText && element.style.cssText.includes('rgba(0, 0, 0, 0.5)')) {
+            modalOverlay = element;
+        }
+        return originalAppendChild.call(this, element);
+    };
+    
+    UI.showConfigModal((result) => {
+        testModalCallback = result;
+    });
+    
+    assertNotNull(modalOverlay, '模态框覆盖层创建');
+    assert(modalOverlay.style.cssText.includes('fixed'), '模态框使用固定定位');
+    assert(modalOverlay.style.cssText.includes('z-index'), '模态框设置了正确的层级');
+    
+    // 测试模态框内容
+    assert(modalOverlay.children.length > 0, '模态框包含内容');
+    const modal = modalOverlay.children[0];
+    assertNotNull(modal, '模态框内容存在');
+    assert(modal.innerHTML.includes('配置 Supabase 连接'), '模态框包含标题');
+    assert(modal.innerHTML.includes('如何获取 Supabase 密钥'), '模态框包含说明');
+    assert(modal.innerHTML.includes('supabaseUrl'), '模态框包含 URL 输入框');
+    assert(modal.innerHTML.includes('supabaseKey'), '模态框包含密钥输入框');
+    assert(modal.innerHTML.includes('tableName'), '模态框包含表名输入框');
+    
+    // 恢复原始函数
+    document.body.appendChild = originalAppendChild;
+    
+    console.log();
+    
+    // 6. Supabase 集成测试
     console.log(colors.yellow, '💾 测试 Supabase 集成', colors.reset);
     
     // 设置测试配置
@@ -333,7 +458,7 @@ function runTests() {
     
     console.log();
     
-    // 6. 完整性测试
+    // 7. 完整性测试
     console.log(colors.yellow, '🔄 测试完整性', colors.reset);
     
     // 测试所有必要的对象和函数是否存在
@@ -347,6 +472,8 @@ function runTests() {
     assertType(CONFIG.set, 'function', 'CONFIG.set 是函数');
     assertType(UI.createSyncButton, 'function', 'UI.createSyncButton 是函数');
     assertType(UI.showStatus, 'function', 'UI.showStatus 是函数');
+    assertType(UI.promptConfig, 'function', 'UI.promptConfig 是函数');
+    assertType(UI.showConfigModal, 'function', 'UI.showConfigModal 是函数');
     assertType(DataExtractor.getChatId, 'function', 'DataExtractor.getChatId 是函数');
     assertType(DataExtractor.extractViaDOM, 'function', 'DataExtractor.extractViaDOM 是函数');
     assertType(DataExtractor.generateHash, 'function', 'DataExtractor.generateHash 是函数');
