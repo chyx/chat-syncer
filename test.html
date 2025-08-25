@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Syncer 测试页面</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f7f7f7;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #10a37f;
+            padding-bottom: 10px;
+        }
+        
+        button {
+            background: #10a37f;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #0d8f6b;
+        }
+        
+        .output {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .success {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        .info {
+            color: #3b82f6;
+        }
+        
+        /* 模拟 ChatGPT 对话界面 */
+        .mock-chatgpt {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            margin: 15px 0;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+        }
+        
+        .message[data-message-author-role="user"] {
+            background: #f7f7f7;
+        }
+        
+        .message[data-message-author-role="assistant"] {
+            background: #f0f9f5;
+        }
+        
+        .markdown, .whitespace-pre-wrap {
+            line-height: 1.5;
+        }
+        
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .config-form {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ChatGPT to Supabase Syncer 测试页面</h1>
+        <p>这个页面用于测试油猴脚本的各个功能模块。</p>
+        
+        <!-- 配置测试 -->
+        <div class="test-section">
+            <h3>1. 配置管理测试</h3>
+            <div class="config-form">
+                <label>Supabase URL:</label>
+                <input type="text" id="test-url" placeholder="https://xxx.supabase.co" style="width: 250px;">
+                <br>
+                <label>API Key:</label>
+                <input type="text" id="test-key" placeholder="your-anon-key" style="width: 250px;">
+                <br>
+                <label>Table Name:</label>
+                <input type="text" id="test-table" value="chat_logs" style="width: 150px;">
+            </div>
+            <button onclick="testConfig()">保存配置</button>
+            <button onclick="testConfigLoad()">加载配置</button>
+            <button onclick="testConfigClear()">清除配置</button>
+            <div id="config-output" class="output"></div>
+        </div>
+        
+        <!-- DOM 提取测试 -->
+        <div class="test-section">
+            <h3>2. DOM 数据提取测试</h3>
+            <div class="mock-chatgpt">
+                <div class="message" data-message-author-role="user">
+                    <div class="markdown">你好，请帮我写一个JavaScript函数来计算斐波那契数列。</div>
+                </div>
+                <div class="message" data-message-author-role="assistant">
+                    <div class="whitespace-pre-wrap">当然！这里是一个计算斐波那契数列的JavaScript函数：
+
+```javascript
+function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+```
+
+这个递归版本很简洁，但对于大数值效率较低。</div>
+                </div>
+                <div class="message" data-message-author-role="user">
+                    <div class="markdown">能否提供一个更高效的版本？</div>
+                </div>
+                <div class="message" data-message-author-role="assistant">
+                    <div class="whitespace-pre-wrap">当然！这里是一个使用动态规划的更高效版本：
+
+```javascript
+function fibonacciDP(n) {
+    if (n <= 1) return n;
+    
+    let prev = 0, curr = 1;
+    for (let i = 2; i <= n; i++) {
+        [prev, curr] = [curr, prev + curr];
+    }
+    return curr;
+}
+```
+
+这个版本的时间复杂度是 O(n)，空间复杂度是 O(1)。</div>
+                </div>
+            </div>
+            <button onclick="testDOMExtraction()">提取DOM数据</button>
+            <button onclick="testHashGeneration()">生成数据哈希</button>
+            <div id="dom-output" class="output"></div>
+        </div>
+        
+        <!-- API 模拟测试 -->
+        <div class="test-section">
+            <h3>3. API 数据格式测试</h3>
+            <button onclick="testAPIFormat()">测试API数据格式化</button>
+            <button onclick="testChatIdExtraction()">测试对话ID提取</button>
+            <div id="api-output" class="output"></div>
+        </div>
+        
+        <!-- Supabase 上传测试 -->
+        <div class="test-section">
+            <h3>4. Supabase 上传测试</h3>
+            <button onclick="testSupabaseConnection()">测试连接</button>
+            <button onclick="testRecordUpload()">测试记录上传</button>
+            <button onclick="testMockUpload()">模拟上传（不实际发送）</button>
+            <div id="supabase-output" class="output"></div>
+        </div>
+        
+        <!-- UI 组件测试 -->
+        <div class="test-section">
+            <h3>5. UI 组件测试</h3>
+            <button onclick="testSyncButton()">创建同步按钮</button>
+            <button onclick="testStatusMessage('测试成功', 'success')">显示成功消息</button>
+            <button onclick="testStatusMessage('测试错误', 'error')">显示错误消息</button>
+            <button onclick="testStatusMessage('测试信息', 'info')">显示信息消息</button>
+            <div id="ui-output" class="output"></div>
+        </div>
+        
+        <!-- 快捷键测试 -->
+        <div class="test-section">
+            <h3>6. 快捷键测试</h3>
+            <p>按 <kbd>Ctrl/⌘ + Shift + S</kbd> 测试快捷键功能</p>
+            <button onclick="testKeyboardShortcut()">启用快捷键监听</button>
+            <div id="keyboard-output" class="output"></div>
+        </div>
+        
+        <!-- 完整流程测试 -->
+        <div class="test-section">
+            <h3>7. 完整流程测试</h3>
+            <button onclick="testFullWorkflow()">执行完整同步流程</button>
+            <div id="workflow-output" class="output"></div>
+        </div>
+    </div>
+
+    <script src="userscript.js"></script>
+    <script>
+        // 测试工具函数
+        function log(element, message, type = 'info') {
+            const output = document.getElementById(element);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            output.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // 1. 配置管理测试
+        function testConfig() {
+            const url = document.getElementById('test-url').value;
+            const key = document.getElementById('test-key').value;
+            const table = document.getElementById('test-table').value;
+            
+            if (!url || !key) {
+                log('config-output', '请填写 URL 和 API Key', 'error');
+                return;
+            }
+            
+            try {
+                CONFIG.set('SUPABASE_URL', url);
+                CONFIG.set('SUPABASE_ANON_KEY', key);
+                CONFIG.set('TABLE_NAME', table);
+                log('config-output', '配置保存成功', 'success');
+            } catch (error) {
+                log('config-output', `配置保存失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testConfigLoad() {
+            try {
+                const url = CONFIG.get('SUPABASE_URL');
+                const key = CONFIG.get('SUPABASE_ANON_KEY');
+                const table = CONFIG.get('TABLE_NAME');
+                
+                log('config-output', `URL: ${url || '未设置'}`, 'info');
+                log('config-output', `Key: ${key ? '已设置' : '未设置'}`, 'info');
+                log('config-output', `Table: ${table || '未设置'}`, 'info');
+            } catch (error) {
+                log('config-output', `配置加载失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testConfigClear() {
+            try {
+                localStorage.removeItem('chatsyncer_supabase_url');
+                localStorage.removeItem('chatsyncer_supabase_anon_key');
+                localStorage.removeItem('chatsyncer_table_name');
+                CONFIG.SUPABASE_URL = null;
+                CONFIG.SUPABASE_ANON_KEY = null;
+                CONFIG.TABLE_NAME = 'chat_logs';
+                log('config-output', '配置清除成功', 'success');
+            } catch (error) {
+                log('config-output', `配置清除失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 2. DOM 提取测试
+        function testDOMExtraction() {
+            try {
+                const data = DataExtractor.extractViaDOM();
+                log('dom-output', `提取到 ${data.messages.length} 条消息`, 'success');
+                log('dom-output', `对话标题: ${data.chat_title}`, 'info');
+                log('dom-output', `数据源: ${data.source}`, 'info');
+                log('dom-output', JSON.stringify(data, null, 2), 'info');
+            } catch (error) {
+                log('dom-output', `DOM 提取失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testHashGeneration() {
+            try {
+                const data = DataExtractor.extractViaDOM();
+                const hash = DataExtractor.generateHash(data);
+                log('dom-output', `生成哈希: ${hash}`, 'success');
+            } catch (error) {
+                log('dom-output', `哈希生成失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 3. API 测试
+        function testAPIFormat() {
+            const mockAPIData = {
+                conversation_id: 'test-chat-id-123',
+                title: '测试对话标题',
+                mapping: {
+                    'node1': {
+                        message: {
+                            author: { role: 'user' },
+                            content: { parts: ['你好，请帮我写一个函数'] }
+                        }
+                    },
+                    'node2': {
+                        message: {
+                            author: { role: 'assistant' },
+                            content: { parts: ['当然可以！这里是一个示例函数：', 'function test() { return "hello"; }'] }
+                        }
+                    }
+                }
+            };
+            
+            try {
+                const formatted = DataExtractor.formatAPIData(mockAPIData);
+                log('api-output', 'API 数据格式化成功', 'success');
+                log('api-output', JSON.stringify(formatted, null, 2), 'info');
+            } catch (error) {
+                log('api-output', `API 格式化失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testChatIdExtraction() {
+            // 模拟不同的 URL 格式
+            const testUrls = [
+                'https://chatgpt.com/c/12345678-90ab-cdef-1234-567890abcdef',
+                'https://chat.openai.com/c/abcdef12-3456-789a-bcde-f1234567890a',
+                'https://chatgpt.com/share/12345678-90ab-cdef-1234-567890abcdef'
+            ];
+            
+            const originalUrl = window.location.href;
+            
+            testUrls.forEach(testUrl => {
+                try {
+                    // 临时修改 URL（仅用于测试）
+                    history.pushState({}, '', testUrl);
+                    const chatId = DataExtractor.getChatId();
+                    log('api-output', `URL: ${testUrl}`, 'info');
+                    log('api-output', `提取的 ID: ${chatId}`, chatId ? 'success' : 'error');
+                } catch (error) {
+                    log('api-output', `ID 提取失败: ${error.message}`, 'error');
+                }
+            });
+            
+            // 恢复原始 URL
+            history.pushState({}, '', originalUrl);
+        }
+
+        // 4. Supabase 测试
+        function testSupabaseConnection() {
+            if (!CONFIG.get('SUPABASE_URL') || !CONFIG.get('SUPABASE_ANON_KEY')) {
+                log('supabase-output', '请先配置 Supabase 信息', 'error');
+                return;
+            }
+            
+            const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/`;
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
+                    'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    log('supabase-output', 'Supabase 连接成功', 'success');
+                } else {
+                    log('supabase-output', `连接失败: ${response.status}`, 'error');
+                }
+            })
+            .catch(error => {
+                log('supabase-output', `连接错误: ${error.message}`, 'error');
+            });
+        }
+        
+        function testRecordUpload() {
+            if (!CONFIG.get('SUPABASE_URL') || !CONFIG.get('SUPABASE_ANON_KEY')) {
+                log('supabase-output', '请先配置 Supabase 信息', 'error');
+                return;
+            }
+            
+            const testRecord = {
+                collected_at: new Date().toISOString(),
+                chat_id: 'test-' + Date.now(),
+                chat_url: window.location.href,
+                chat_title: '测试对话',
+                page_title: document.title,
+                messages: [
+                    { idx: 0, role: 'user', text: '测试消息', html: '<p>测试消息</p>' }
+                ],
+                meta: {
+                    user_agent: navigator.userAgent,
+                    source: 'test',
+                    hash: 'test-hash-' + Date.now()
+                }
+            };
+            
+            ChatSyncer.uploadToSupabase(testRecord)
+                .then(() => {
+                    log('supabase-output', '测试记录上传成功', 'success');
+                })
+                .catch(error => {
+                    log('supabase-output', `上传失败: ${error.message}`, 'error');
+                });
+        }
+        
+        function testMockUpload() {
+            const testData = DataExtractor.extractViaDOM();
+            log('supabase-output', '模拟上传数据:', 'info');
+            log('supabase-output', JSON.stringify(testData, null, 2), 'info');
+            log('supabase-output', '模拟上传完成（未实际发送）', 'success');
+        }
+
+        // 5. UI 测试
+        function testSyncButton() {
+            try {
+                // 移除已存在的测试按钮
+                const existing = document.querySelector('.test-sync-button');
+                if (existing) existing.remove();
+                
+                const button = UI.createSyncButton();
+                button.classList.add('test-sync-button');
+                button.style.position = 'relative';
+                button.style.right = 'auto';
+                button.style.bottom = 'auto';
+                
+                const section = document.getElementById('ui-output').parentNode;
+                section.appendChild(button);
+                
+                log('ui-output', '同步按钮创建成功', 'success');
+            } catch (error) {
+                log('ui-output', `按钮创建失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testStatusMessage(message, type) {
+            try {
+                UI.showStatus(message, type);
+                log('ui-output', `显示${type}消息: ${message}`, 'success');
+            } catch (error) {
+                log('ui-output', `消息显示失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 6. 快捷键测试
+        function testKeyboardShortcut() {
+            try {
+                document.addEventListener('keydown', (event) => {
+                    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'S') {
+                        event.preventDefault();
+                        log('keyboard-output', '快捷键触发成功！', 'success');
+                    }
+                });
+                log('keyboard-output', '快捷键监听已启用，请按 Ctrl/⌘ + Shift + S', 'info');
+            } catch (error) {
+                log('keyboard-output', `快捷键设置失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 7. 完整流程测试
+        async function testFullWorkflow() {
+            try {
+                log('workflow-output', '开始完整流程测试...', 'info');
+                
+                // 检查配置
+                if (!CONFIG.get('SUPABASE_URL') || !CONFIG.get('SUPABASE_ANON_KEY')) {
+                    log('workflow-output', '配置未完成，请先设置 Supabase 信息', 'error');
+                    return;
+                }
+                
+                // 模拟同步流程
+                log('workflow-output', '正在提取对话数据...', 'info');
+                const data = DataExtractor.extractViaDOM();
+                
+                log('workflow-output', `提取完成，共 ${data.messages.length} 条消息`, 'success');
+                
+                // 生成完整记录
+                const record = {
+                    collected_at: new Date().toISOString(),
+                    chat_id: data.chat_id || 'test-' + Date.now(),
+                    chat_url: data.chat_url,
+                    chat_title: data.chat_title,
+                    page_title: data.page_title,
+                    messages: data.messages,
+                    meta: {
+                        user_agent: navigator.userAgent,
+                        source: data.source,
+                        viewport: {
+                            width: window.innerWidth,
+                            height: window.innerHeight
+                        },
+                        hash: DataExtractor.generateHash(data),
+                        collected_at: new Date().toISOString()
+                    }
+                };
+                
+                log('workflow-output', '记录构建完成', 'success');
+                log('workflow-output', '模拟上传到 Supabase...', 'info');
+                
+                // 这里可以选择实际上传或仅模拟
+                // await ChatSyncer.uploadToSupabase(record);
+                
+                log('workflow-output', '完整流程测试完成！', 'success');
+                
+            } catch (error) {
+                log('workflow-output', `流程测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('workflow-output', '测试页面加载完成', 'info');
+            
+            // 模拟 ChatGPT 的 URL
+            if (!window.location.href.includes('/c/')) {
+                history.pushState({}, '', window.location.href + '#/c/test-chat-id-12345');
+            }
+        });
+    </script>
+</body>
+</html>
