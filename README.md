@@ -24,14 +24,26 @@ This userscript allows you to capture and sync ChatGPT conversations directly fr
 
 ## Installation
 
-Copy the complete userscript from `gpt.md` and paste it into your userscript manager.
+### Option 1: ChatGPT Syncer (Main Script)
+Copy the complete userscript from `userscript.js` and paste it into your userscript manager.
+
+### Option 2: Supabase Config Helper (Optional)
+For easier configuration, also install `supabase-config.js` - this adds a helpful config export button directly on your Supabase dashboard.
 
 ## Usage
 
+### Easy Configuration (Recommended)
+1. Install both userscripts (`userscript.js` + `supabase-config.js`)
+2. Go to your Supabase project → Settings → API
+3. Click the "🚀 配置 ChatGPT Syncer" button (top-right)
+4. Click "🚀 直接保存配置" - no copying needed!
+5. Go to ChatGPT and sync your first conversation
+
+### Manual Configuration
 - Navigate to any ChatGPT conversation
 - Click the "Sync → Supabase" button (bottom-right corner)
 - Or use keyboard shortcut: `Ctrl/⌘ + Shift + S`
-- First time will prompt for Supabase URL, API key, and table name
+- Fill in the configuration form with your Supabase URL, API key, and table name
 
 ## Database Schema
 
