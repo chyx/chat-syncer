@@ -12,6 +12,7 @@
 // @match        https://app.supabase.com/project/*
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
 (function() {
@@ -419,23 +420,29 @@
             async uploadToSupabase(record) {
                 const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/${CONFIG.get('TABLE_NAME')}`;
                 
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
-                        'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify(record)
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: 'POST',
+                        url: url,
+                        headers: {
+                            'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
+                            'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        data: JSON.stringify(record),
+                        onload: function(response) {
+                            if (response.status >= 200 && response.status < 300) {
+                                resolve(response);
+                            } else {
+                                reject(new Error(`HTTP ${response.status}: ${response.responseText}`));
+                            }
+                        },
+                        onerror: function(error) {
+                            reject(new Error('Network error: ' + error));
+                        }
+                    });
                 });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);
-                }
-
-                return response;
             }
         },
 
