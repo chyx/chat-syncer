@@ -1,18 +1,26 @@
 // ==UserScript==
 // @name         ChatGPT to Supabase Syncer
 // @namespace    http://tampermonkey.net/
-// @version      0.2.0
+// @version      0.3.0
 // @description  Sync ChatGPT conversations to Supabase database with one click
 // @author       You
 // @match        https://chatgpt.com/c/*
 // @match        https://chat.openai.com/c/*
 // @match        https://chatgpt.com/share/*
 // @match        https://chat.openai.com/share/*
-// @grant        none
+// @grant        GM_getValue
+// @grant        GM_setValue
 // ==/UserScript==
 
 (function() {
     'use strict';
+
+    // Storage keys for GM API
+    const STORAGE_KEYS = {
+        url: 'chat_syncer.supabase_url',
+        key: 'chat_syncer.supabase_key',
+        table: 'chat_syncer.table'
+    };
 
     // Configuration management
     const CONFIG = {
@@ -21,15 +29,50 @@
         TABLE_NAME: 'chat_logs',
         get: function(key) {
             if (this[key] !== null) return this[key];
+            
+            // Map keys to GM storage keys
+            let gmKey;
+            if (key === 'SUPABASE_URL') gmKey = STORAGE_KEYS.url;
+            else if (key === 'SUPABASE_ANON_KEY') gmKey = STORAGE_KEYS.key;
+            else if (key === 'TABLE_NAME') gmKey = STORAGE_KEYS.table;
+            
+            // Try GM storage first
+            if (gmKey) {
+                const stored = GM_getValue(gmKey, '');
+                if (stored) {
+                    this[key] = stored;
+                    return stored;
+                }
+            }
+            
+            // Fallback to localStorage for migration
             const stored = localStorage.getItem(`chatsyncer_${key.toLowerCase()}`);
             if (stored) {
                 this[key] = stored;
+                // Migrate to GM storage
+                if (gmKey) {
+                    GM_setValue(gmKey, stored);
+                    // Clean up old localStorage
+                    localStorage.removeItem(`chatsyncer_${key.toLowerCase()}`);
+                }
                 return stored;
             }
+            
             return null;
         },
         set: function(key, value) {
             this[key] = value;
+            
+            // Map keys to GM storage keys
+            let gmKey;
+            if (key === 'SUPABASE_URL') gmKey = STORAGE_KEYS.url;
+            else if (key === 'SUPABASE_ANON_KEY') gmKey = STORAGE_KEYS.key;
+            else if (key === 'TABLE_NAME') gmKey = STORAGE_KEYS.table;
+            
+            if (gmKey) {
+                GM_setValue(gmKey, value);
+            }
+            // Also save to localStorage for backward compatibility
             localStorage.setItem(`chatsyncer_${key.toLowerCase()}`, value);
         }
     };

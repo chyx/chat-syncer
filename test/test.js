@@ -58,6 +58,15 @@ function assertType(value, expectedType, message) {
     return assert(typeof value === expectedType, message || `Expected type ${expectedType}, got ${typeof value}`);
 }
 
+// 模拟 GM API
+const mockGMStorage = new Map();
+global.GM_getValue = function(key, defaultValue = '') {
+    return mockGMStorage.get(key) || defaultValue;
+};
+global.GM_setValue = function(key, value) {
+    mockGMStorage.set(key, value);
+};
+
 // 模拟浏览器环境
 function createMockBrowser() {
     global.window = {
@@ -284,13 +293,40 @@ function runTests() {
     CONFIG.set('TEST_KEY', 'test_value');
     assertEqual(CONFIG.get('TEST_KEY'), 'test_value', '配置设置和获取');
     
-    // 测试 localStorage 存储
+    // 测试 GM 存储
     CONFIG.set('SUPABASE_URL', 'https://test.supabase.co');
-    assertEqual(localStorage.getItem('chatsyncer_supabase_url'), 'https://test.supabase.co', 'localStorage 存储');
+    assertEqual(GM_getValue('chat_syncer.supabase_url'), 'https://test.supabase.co', 'GM 存储');
+    assertEqual(localStorage.getItem('chatsyncer_supabase_url'), 'https://test.supabase.co', 'localStorage 兼容存储');
     
     // 测试配置加载
     CONFIG.SUPABASE_URL = null;
-    assertEqual(CONFIG.get('SUPABASE_URL'), 'https://test.supabase.co', '配置从 localStorage 加载');
+    assertEqual(CONFIG.get('SUPABASE_URL'), 'https://test.supabase.co', '配置从 GM 存储加载');
+    
+    // 测试 localStorage 迁移到 GM 存储
+    // 清理之前的状态
+    mockGMStorage.clear();
+    localStorage.data = {};
+    CONFIG.SUPABASE_ANON_KEY = null;
+    
+    // 设置旧的 localStorage 数据
+    localStorage.setItem('chatsyncer_supabase_anon_key', 'old-key');
+    
+    // 调用 get 应该触发迁移
+    const result = CONFIG.get('SUPABASE_ANON_KEY');
+    assertEqual(result, 'old-key', 'localStorage 迁移到 GM - 返回正确值');
+    
+    // 检查迁移后的状态
+    if (GM_getValue('chat_syncer.supabase_key') === 'old-key') {
+        assert(true, 'GM 存储迁移成功');
+    } else {
+        assert(false, 'GM 存储迁移失败 - GM中的值: ' + GM_getValue('chat_syncer.supabase_key'));
+    }
+    
+    if (localStorage.getItem('chatsyncer_supabase_anon_key') === null) {
+        assert(true, 'localStorage 清理成功');
+    } else {
+        assert(false, 'localStorage 清理失败 - localStorage中的值: ' + localStorage.getItem('chatsyncer_supabase_anon_key'));
+    }
     
     console.log();
     

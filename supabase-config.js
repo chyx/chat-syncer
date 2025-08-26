@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://supabase.com/dashboard/project/*
 // @match        https://app.supabase.com/project/*
-// @grant        none
+// @grant        GM_setValue
 // ==/UserScript==
 
 (function() {
@@ -217,7 +217,12 @@
 
         saveConfigToStorage(config) {
             try {
-                // Save to localStorage using the same keys as the main userscript
+                // Save using GM API for cross-domain compatibility
+                GM_setValue('chat_syncer.supabase_url', config.url);
+                GM_setValue('chat_syncer.supabase_key', config.key);
+                GM_setValue('chat_syncer.table', 'chat_logs');
+                
+                // Also save to localStorage for backward compatibility
                 localStorage.setItem('chatsyncer_supabase_url', config.url);
                 localStorage.setItem('chatsyncer_supabase_anon_key', config.key);
                 localStorage.setItem('chatsyncer_table_name', 'chat_logs');
