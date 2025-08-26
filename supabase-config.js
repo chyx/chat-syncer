@@ -26,10 +26,10 @@
         },
 
         getAnonKey() {
-            // Try to find the anon key from the page
-            const keyElements = document.querySelectorAll('code, span[class*="font-mono"], pre');
+            // Try to find the anon key from the page - support input elements
+            const keyElements = document.querySelectorAll('code, span[class*="font-mono"], pre, input[type="text"], input[type="password"], textarea');
             for (const element of keyElements) {
-                const text = element.textContent || element.innerText;
+                const text = element.textContent || element.innerText || element.value;
                 if (text && text.startsWith('eyJ') && text.includes('.') && text.length > 100) {
                     return text.trim();
                 }
