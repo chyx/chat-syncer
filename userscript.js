@@ -393,7 +393,18 @@
         async syncConversation() {
             try {
                 // 检查配置
-                if (!CONFIG.get('SUPABASE_URL') || !CONFIG.get('SUPABASE_ANON_KEY')) {
+                const url = CONFIG.get('SUPABASE_URL');
+                const key = CONFIG.get('SUPABASE_ANON_KEY');
+                
+                console.log('Debug - 检查配置:', {
+                    url: url ? '已设置' : '未设置',
+                    key: key ? '已设置' : '未设置',
+                    gmUrl: GM_getValue('chat_syncer.supabase_url', ''),
+                    gmKey: GM_getValue('chat_syncer.supabase_key', '')
+                });
+                
+                if (!url || !key) {
+                    UI.showStatus('需要配置 Supabase 信息', 'error');
                     const configResult = await UI.promptConfig();
                     if (!configResult) {
                         UI.showStatus('配置取消', 'error');

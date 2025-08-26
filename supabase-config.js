@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Supabase Config Helper for ChatGPT Syncer
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.1.0
 // @description  Quick config export from Supabase dashboard for ChatGPT Syncer
 // @author       You
 // @match        https://supabase.com/dashboard/project/*
