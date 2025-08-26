@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试 Supabase 配置脚本</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .section { background: #f5f5f5; padding: 20px; margin: 15px 0; border-radius: 8px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button { padding: 12px 20px; margin: 8px; cursor: pointer; border: none; border-radius: 5px; background: #007bff; color: white; }
+        button:hover { background: #0056b3; }
+        .config-display { background: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .key-item { margin: 8px 0; }
+        .key-label { font-weight: bold; display: inline-block; width: 120px; }
+        #console-output { background: #1e1e1e; color: #00ff00; padding: 15px; border-radius: 5px; font-family: monospace; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Supabase 配置脚本测试</h1>
+    
+    <div class="section">
+        <h2>环境检查</h2>
+        <button onclick="checkEnvironment()">检查环境</button>
+        <div id="env-results"></div>
+    </div>
+
+    <div class="section">
+        <h2>模拟配置测试</h2>
+        <p>这将模拟从 Supabase 页面提取配置信息的过程</p>
+        <div class="config-display">
+            <div class="key-item">
+                <span class="key-label">项目 URL:</span>
+                <input type="text" id="test-url" value="https://example.supabase.co" style="width: 300px; padding: 5px;">
+            </div>
+            <div class="key-item">
+                <span class="key-label">匿名密钥:</span>
+                <input type="text" id="test-key" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.key" style="width: 400px; padding: 5px;">
+            </div>
+        </div>
+        <button onclick="testSaveConfig()">测试保存配置</button>
+        <button onclick="testLoadConfig()">测试读取配置</button>
+        <button onclick="clearConfig()">清除配置</button>
+        <div id="config-results"></div>
+    </div>
+
+    <div class="section">
+        <h2>当前配置状态</h2>
+        <button onclick="showCurrentConfig()">显示当前配置</button>
+        <div id="current-config"></div>
+    </div>
+
+    <div class="section">
+        <h2>控制台输出</h2>
+        <button onclick="clearConsole()">清空</button>
+        <pre id="console-output"></pre>
+    </div>
+
+    <script>
+        // 重定向 console.log 到页面
+        const originalLog = console.log;
+        const originalError = console.error;
+        const consoleOutput = document.getElementById('console-output');
+        
+        function logToPage(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const line = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            consoleOutput.textContent += line;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToPage(args.join(' '), 'log');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToPage(args.join(' '), 'error');
+        };
+
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            const statusClass = type === 'error' ? 'error' : type === 'success' ? 'success' : 'warning';
+            element.innerHTML = `<div class="status ${statusClass}">${message}</div>`;
+        }
+
+        function checkEnvironment() {
+            console.log('开始环境检查...');
+            
+            const checks = [
+                { name: 'GM_getValue', available: typeof GM_getValue !== 'undefined' },
+                { name: 'GM_setValue', available: typeof GM_setValue !== 'undefined' },
+                { name: 'localStorage', available: typeof localStorage !== 'undefined' }
+            ];
+
+            let html = '<h3>环境检查结果:</h3>';
+            let allOk = true;
+
+            checks.forEach(check => {
+                const status = check.available ? '✅' : '❌';
+                const color = check.available ? 'green' : 'red';
+                html += `<div style="color: ${color};">${status} ${check.name}: ${check.available ? '可用' : '不可用'}</div>`;
+                if (!check.available) allOk = false;
+            });
+
+            if (allOk) {
+                html += '<div class="status success">✅ 所有必要的 API 都可用</div>';
+            } else {
+                html += '<div class="status error">❌ 缺少必要的 API，请确保在 Tampermonkey 中运行此页面</div>';
+            }
+
+            document.getElementById('env-results').innerHTML = html;
+        }
+
+        function testSaveConfig() {
+            const url = document.getElementById('test-url').value;
+            const key = document.getElementById('test-key').value;
+            
+            if (!url || !key) {
+                showStatus('config-results', '请填写测试配置', 'error');
+                return;
+            }
+
+            console.log('测试保存配置:', { url, key: key.substring(0, 20) + '...' });
+
+            try {
+                if (typeof GM_setValue === 'undefined') {
+                    throw new Error('GM_setValue 不可用');
+                }
+
+                // 保存配置
+                GM_setValue('chat_syncer.supabase_url', url);
+                GM_setValue('chat_syncer.supabase_key', key);
+                GM_setValue('chat_syncer.table', 'chat_logs');
+
+                // 验证保存
+                const savedUrl = GM_getValue('chat_syncer.supabase_url', '');
+                const savedKey = GM_getValue('chat_syncer.supabase_key', '');
+                
+                console.log('保存验证:', {
+                    savedUrl: savedUrl ? '✓' : '✗',
+                    savedKey: savedKey ? '✓' : '✗'
+                });
+
+                if (savedUrl === url && savedKey === key) {
+                    showStatus('config-results', '✅ 配置保存成功！GM 存储工作正常', 'success');
+                } else {
+                    showStatus('config-results', '❌ 配置保存验证失败', 'error');
+                }
+
+            } catch (error) {
+                console.error('保存配置失败:', error);
+                showStatus('config-results', '❌ 保存失败: ' + error.message, 'error');
+            }
+        }
+
+        function testLoadConfig() {
+            console.log('测试读取配置...');
+            
+            try {
+                if (typeof GM_getValue === 'undefined') {
+                    throw new Error('GM_getValue 不可用');
+                }
+
+                const url = GM_getValue('chat_syncer.supabase_url', '');
+                const key = GM_getValue('chat_syncer.supabase_key', '');
+                const table = GM_getValue('chat_syncer.table', '');
+
+                console.log('读取结果:', {
+                    url: url ? '已设置' : '未设置',
+                    key: key ? '已设置' : '未设置',
+                    table: table ? '已设置' : '未设置'
+                });
+
+                if (url && key) {
+                    showStatus('config-results', '✅ 配置读取成功！', 'success');
+                } else {
+                    showStatus('config-results', '⚠️ 配置为空或不完整', 'warning');
+                }
+
+            } catch (error) {
+                console.error('读取配置失败:', error);
+                showStatus('config-results', '❌ 读取失败: ' + error.message, 'error');
+            }
+        }
+
+        function clearConfig() {
+            console.log('清除配置...');
+            
+            try {
+                if (typeof GM_setValue !== 'undefined') {
+                    GM_setValue('chat_syncer.supabase_url', '');
+                    GM_setValue('chat_syncer.supabase_key', '');
+                    GM_setValue('chat_syncer.table', '');
+                }
+                
+                showStatus('config-results', '✅ 配置已清除', 'success');
+                
+            } catch (error) {
+                console.error('清除配置失败:', error);
+                showStatus('config-results', '❌ 清除失败: ' + error.message, 'error');
+            }
+        }
+
+        function showCurrentConfig() {
+            console.log('显示当前配置...');
+            
+            let html = '<h3>当前配置:</h3><div class="config-display">';
+            
+            if (typeof GM_getValue !== 'undefined') {
+                const url = GM_getValue('chat_syncer.supabase_url', '');
+                const key = GM_getValue('chat_syncer.supabase_key', '');
+                const table = GM_getValue('chat_syncer.table', '');
+                
+                html += `
+                    <div class="key-item"><span class="key-label">URL:</span> ${url || '未设置'}</div>
+                    <div class="key-item"><span class="key-label">密钥:</span> ${key ? key.substring(0, 30) + '...' : '未设置'}</div>
+                    <div class="key-item"><span class="key-label">表名:</span> ${table || '未设置'}</div>
+                `;
+            } else {
+                html += '<div class="status error">GM API 不可用</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('current-config').innerHTML = html;
+        }
+
+        function clearConsole() {
+            consoleOutput.textContent = '';
+        }
+
+        // 页面加载时自动检查环境
+        window.addEventListener('load', () => {
+            setTimeout(checkEnvironment, 100);
+            console.log('页面加载完成，环境检查开始...');
+        });
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@
 // @author       You
 // @match        https://supabase.com/dashboard/project/*
 // @match        https://app.supabase.com/project/*
+// @grant        GM_getValue
 // @grant        GM_setValue
 // ==/UserScript==
 
@@ -217,18 +218,42 @@
 
         saveConfigToStorage(config) {
             try {
+                console.log('开始保存配置:', config);
+                
+                // Check if GM API is available
+                if (typeof GM_setValue === 'undefined') {
+                    console.error('GM_setValue 不可用');
+                    this.showStatus('❌ GM API 不可用，请检查 Tampermonkey 设置', 'error');
+                    return;
+                }
+                
                 // Save using GM API for cross-domain compatibility
+                console.log('保存到 GM 存储...');
                 GM_setValue('chat_syncer.supabase_url', config.url);
                 GM_setValue('chat_syncer.supabase_key', config.key);
                 GM_setValue('chat_syncer.table', 'chat_logs');
                 
+                // Verify GM storage
+                const savedUrl = GM_getValue('chat_syncer.supabase_url', '');
+                const savedKey = GM_getValue('chat_syncer.supabase_key', '');
+                console.log('GM 存储验证:', {
+                    savedUrl: savedUrl ? '✓' : '✗',
+                    savedKey: savedKey ? '✓' : '✗'
+                });
+                
                 // Also save to localStorage for backward compatibility
+                console.log('保存到 localStorage...');
                 localStorage.setItem('chatsyncer_supabase_url', config.url);
                 localStorage.setItem('chatsyncer_supabase_anon_key', config.key);
                 localStorage.setItem('chatsyncer_table_name', 'chat_logs');
                 
-                this.showStatus('✅ 配置已保存！现在可以在 ChatGPT 页面直接同步对话', 'success');
+                if (savedUrl && savedKey) {
+                    this.showStatus('✅ 配置已保存到 GM 存储！现在可以在 ChatGPT 页面直接同步对话', 'success');
+                } else {
+                    this.showStatus('⚠️ 配置保存到 localStorage，但 GM 存储可能失败', 'error');
+                }
             } catch (error) {
+                console.error('保存配置时出错:', error);
                 this.showStatus('❌ 保存失败：' + error.message, 'error');
             }
         },
