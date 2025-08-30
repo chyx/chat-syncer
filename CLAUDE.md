@@ -8,3 +8,6 @@
 
 ## Instructions Recording
 - When user says "记住", write the instruction to CLAUDE.md
+
+## Testing Guidelines
+- 不要用html测试，用能直接运行的js测试

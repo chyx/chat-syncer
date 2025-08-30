@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.1.0
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -10,6 +10,8 @@
 // @match        https://chat.openai.com/c/*
 // @match        https://chatgpt.com/share/*
 // @match        https://chat.openai.com/share/*
+// @match        https://chatgpt.com/
+// @match        https://chat.openai.com/
 // @match        https://supabase.com/dashboard/project/*
 // @match        https://app.supabase.com/project/*
 // @grant        GM_getValue
@@ -93,12 +95,23 @@
             return /chatgpt\.com|chat\.openai\.com/.test(location.href);
         },
         
+        isChatGPTHomePage() {
+            const url = location.href;
+            return (url === 'https://chatgpt.com/' || url === 'https://chat.openai.com/' || 
+                   url === 'https://chatgpt.com' || url === 'https://chat.openai.com');
+        },
+        
+        isChatGPTConversationPage() {
+            return this.isChatGPTPage() && !this.isChatGPTHomePage();
+        },
+        
         isSupabasePage() {
             return /supabase\.com/.test(location.href);
         },
         
         getCurrentPageType() {
-            if (this.isChatGPTPage()) return 'chatgpt';
+            if (this.isChatGPTHomePage()) return 'chatgpt_home';
+            if (this.isChatGPTConversationPage()) return 'chatgpt_conversation';
             if (this.isSupabasePage()) return 'supabase';
             return 'unknown';
         }
@@ -143,6 +156,100 @@
                 
                 button.onclick = () => ChatGPTModule.ChatSyncer.syncConversation();
                 return button;
+            },
+            
+            createBatchSyncButton() {
+                const button = document.createElement('button');
+                button.innerHTML = '📚 批量同步最近20条';
+                button.id = 'batch-sync-btn';
+                button.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    background: #7c3aed;
+                    color: white;
+                    border: none;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(124,58,237,0.3);
+                    transition: all 0.2s ease;
+                    min-width: 180px;
+                    text-align: center;
+                `;
+                
+                button.onmouseover = () => {
+                    button.style.background = '#6d28d9';
+                    button.style.transform = 'translateY(-2px)';
+                    button.style.boxShadow = '0 6px 16px rgba(124,58,237,0.4)';
+                };
+                
+                button.onmouseout = () => {
+                    button.style.background = '#7c3aed';
+                    button.style.transform = 'translateY(0)';
+                    button.style.boxShadow = '0 4px 12px rgba(124,58,237,0.3)';
+                };
+                
+                button.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync();
+                return button;
+            },
+            
+            createProgressModal() {
+                const overlay = document.createElement('div');
+                overlay.id = 'batch-sync-modal';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.6);
+                    z-index: 10003;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                `;
+
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    background: white;
+                    border-radius: 16px;
+                    padding: 24px;
+                    max-width: 480px;
+                    width: 90%;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                `;
+
+                modal.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">批量同步进行中</h3>
+                        <p style="margin: 0; font-size: 14px; color: #6b7280;">正在同步最近的对话到 Supabase...</p>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <div style="background: #f3f4f6; height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="progress-bar" style="background: #7c3aed; height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="progress-text" style="text-align: center; margin-top: 8px; font-size: 14px; color: #6b7280;">准备中...</div>
+                    </div>
+                    
+                    <div id="sync-results" style="margin-bottom: 16px; font-size: 14px;">
+                        <div>✅ <span id="success-count">0</span> 条成功</div>
+                        <div>❌ <span id="error-count">0</span> 条失败</div>
+                        <div>⏭️ <span id="skip-count">0</span> 条跳过</div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button id="cancel-batch" style="padding: 8px 16px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; font-size: 14px; cursor: pointer; margin-right: 8px;">取消</button>
+                        <button id="close-modal" style="padding: 8px 16px; border: none; background: #7c3aed; color: white; border-radius: 6px; font-size: 14px; cursor: pointer; display: none;">关闭</button>
+                    </div>
+                `;
+
+                overlay.appendChild(modal);
+                return overlay;
             },
 
             showStatus(message, type = 'info') {
@@ -304,6 +411,101 @@
             }
         },
 
+        // Batch conversation fetcher
+        BatchFetcher: {
+            async getConversationsList(limit = 20) {
+                const token = await this.getAccessToken();
+                if (!token) {
+                    throw new Error('无法获取访问令牌');
+                }
+                
+                const apiBase = location.origin + '/backend-api';
+                const url = `${apiBase}/conversations?offset=0&limit=${limit}&order=updated`;
+                
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url: url,
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        onload: function(response) {
+                            if (response.status !== 200) {
+                                reject(new Error(`获取对话列表失败: ${response.status}`));
+                                return;
+                            }
+                            try {
+                                const data = JSON.parse(response.responseText);
+                                resolve(data.items || []);
+                            } catch (e) {
+                                reject(new Error('解析响应数据失败'));
+                            }
+                        },
+                        onerror: function(error) {
+                            reject(new Error('网络请求失败'));
+                        }
+                    });
+                });
+            },
+            
+            async getConversationDetail(conversationId) {
+                const token = await this.getAccessToken();
+                if (!token) {
+                    throw new Error('无法获取访问令牌');
+                }
+                
+                const apiBase = location.origin + '/backend-api';
+                const url = `${apiBase}/conversation/${conversationId}`;
+                
+                return new Promise((resolve, reject) => {
+                    GM_xmlhttpRequest({
+                        method: 'GET',
+                        url: url,
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        onload: function(response) {
+                            if (response.status !== 200) {
+                                reject(new Error(`获取对话详情失败: ${response.status}`));
+                                return;
+                            }
+                            try {
+                                const data = JSON.parse(response.responseText);
+                                resolve(data);
+                            } catch (e) {
+                                reject(new Error('解析对话数据失败'));
+                            }
+                        },
+                        onerror: function(error) {
+                            reject(new Error('网络请求失败'));
+                        }
+                    });
+                });
+            },
+            
+            async getAccessToken() {
+                // 从页面上下文获取访问令牌
+                try {
+                    const ctx = window.__remixContext?.state?.loaderData?.root?.clientBootstrap?.session?.accessToken;
+                    if (ctx) return ctx;
+                } catch {}
+                try {
+                    const nextUser = window.__NEXT_DATA__?.props?.pageProps?.accessToken;
+                    if (nextUser) return nextUser;
+                } catch {}
+                
+                // 从API获取
+                try {
+                    const response = await fetch('/api/auth/session');
+                    if (!response.ok) return null;
+                    const data = await response.json();
+                    return data?.accessToken || null;
+                } catch {
+                    return null;
+                }
+            }
+        },
+
         // Data extraction utilities
         DataExtractor: {
             getChatId() {
@@ -348,6 +550,37 @@
                     hash = hash & hash; // Convert to 32-bit integer
                 }
                 return Math.abs(hash).toString(16);
+            },
+            
+            normalizeConversation(conv) {
+                const items = [];
+                const map = conv?.mapping || {};
+                for (const node of Object.values(map)) {
+                    const msg = node && node.message;
+                    if (!msg) continue;
+                    const role = msg.author?.role;
+                    if (!role || (role !== 'user' && role !== 'assistant')) continue;
+                    const ct = msg.content?.content_type;
+                    let text = '';
+                    if (ct === 'text') {
+                        text = (msg.content.parts || []).join('\n\n');
+                    } else if (ct === 'multimodal_text') {
+                        text = (msg.content.parts || []).map(p => {
+                            if (typeof p === 'string') return p;
+                            if (p?.asset_pointer) return `[image:${p.asset_pointer}]`;
+                            return '';
+                        }).join('\n\n');
+                    } else if (ct === 'code') {
+                        text = (msg.content.text || msg.content.code || '');
+                    } else if (ct === 'execution_output') {
+                        text = '[tool/output]\n' + (msg.metadata?.aggregate_result?.messages?.map(m => m.text || m.message || '').join('\n') || '');
+                    } else {
+                        text = JSON.stringify(msg.content);
+                    }
+                    items.push({ id: msg.id, ts: msg.create_time || 0, role, text });
+                }
+                items.sort((a,b) => (a.ts||0) - (b.ts||0));
+                return items.map((m, idx) => ({ idx, role: m.role, text: m.text, html: '' }));
             }
         },
 
@@ -402,7 +635,7 @@
                                 height: window.innerHeight 
                             },
                             source: 'unified_script',
-                            version: '1.0.1'
+                            version: '1.1.0'
                         }
                     };
 
@@ -448,6 +681,167 @@
             }
         },
 
+        // Batch syncer class
+        BatchSyncer: {
+            isRunning: false,
+            shouldCancel: false,
+            
+            async startBatchSync() {
+                if (this.isRunning) {
+                    ChatGPTModule.UI.showStatus('批量同步正在进行中...', 'info');
+                    return;
+                }
+                
+                // 检查配置
+                const url = CONFIG.get('SUPABASE_URL');
+                const key = CONFIG.get('SUPABASE_ANON_KEY');
+                
+                if (!url || !key) {
+                    ChatGPTModule.UI.showStatus('需要先配置 Supabase 信息', 'error');
+                    const configResult = await ChatGPTModule.UI.promptConfig();
+                    if (!configResult) return;
+                }
+                
+                this.isRunning = true;
+                this.shouldCancel = false;
+                
+                const modal = ChatGPTModule.UI.createProgressModal();
+                document.body.appendChild(modal);
+                
+                const cancelBtn = modal.querySelector('#cancel-batch');
+                const closeBtn = modal.querySelector('#close-modal');
+                const progressBar = modal.querySelector('#progress-bar');
+                const progressText = modal.querySelector('#progress-text');
+                const successCount = modal.querySelector('#success-count');
+                const errorCount = modal.querySelector('#error-count');
+                const skipCount = modal.querySelector('#skip-count');
+                
+                let stats = { success: 0, error: 0, skip: 0 };
+                
+                cancelBtn.onclick = () => {
+                    this.shouldCancel = true;
+                    cancelBtn.textContent = '正在取消...';
+                    cancelBtn.disabled = true;
+                };
+                
+                closeBtn.onclick = () => {
+                    document.body.removeChild(modal);
+                    this.isRunning = false;
+                };
+                
+                try {
+                    // 获取对话列表
+                    progressText.textContent = '正在获取对话列表...';
+                    const conversations = await ChatGPTModule.BatchFetcher.getConversationsList(20);
+                    
+                    if (conversations.length === 0) {
+                        progressText.textContent = '没有找到对话';
+                        cancelBtn.style.display = 'none';
+                        closeBtn.style.display = 'inline-block';
+                        return;
+                    }
+                    
+                    progressText.textContent = `找到 ${conversations.length} 条对话，开始同步...`;
+                    
+                    // 批量处理
+                    for (let i = 0; i < conversations.length; i++) {
+                        if (this.shouldCancel) {
+                            progressText.textContent = '同步已取消';
+                            break;
+                        }
+                        
+                        const conv = conversations[i];
+                        const progress = ((i + 1) / conversations.length) * 100;
+                        progressBar.style.width = `${progress}%`;
+                        progressText.textContent = `正在处理: ${conv.title || 'Untitled'} (${i + 1}/${conversations.length})`;
+                        
+                        try {
+                            await this.syncSingleConversation(conv);
+                            stats.success++;
+                            successCount.textContent = stats.success;
+                        } catch (error) {
+                            console.error(`同步对话 ${conv.id} 失败:`, error);
+                            if (error.message.includes('已存在')) {
+                                stats.skip++;
+                                skipCount.textContent = stats.skip;
+                            } else {
+                                stats.error++;
+                                errorCount.textContent = stats.error;
+                            }
+                        }
+                        
+                        // 添加延迟避免API限流
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                    
+                    if (!this.shouldCancel) {
+                        progressText.textContent = `同步完成！成功 ${stats.success} 条，失败 ${stats.error} 条，跳过 ${stats.skip} 条`;
+                    }
+                    
+                } catch (error) {
+                    console.error('批量同步失败:', error);
+                    progressText.textContent = '同步失败: ' + error.message;
+                    stats.error++;
+                    errorCount.textContent = stats.error;
+                } finally {
+                    cancelBtn.style.display = 'none';
+                    closeBtn.style.display = 'inline-block';
+                    this.isRunning = false;
+                }
+            },
+            
+            async syncSingleConversation(conversationInfo) {
+                // 获取详细对话内容
+                const conv = await ChatGPTModule.BatchFetcher.getConversationDetail(conversationInfo.id);
+                const messages = ChatGPTModule.DataExtractor.normalizeConversation(conv);
+                
+                if (messages.length === 0) {
+                    throw new Error('对话无有效消息');
+                }
+                
+                // 创建上传记录
+                const record = {
+                    collected_at: new Date().toISOString(),
+                    chat_id: conv.id || conversationInfo.id,
+                    chat_url: `https://chatgpt.com/c/${conversationInfo.id}`,
+                    chat_title: conv.title || conversationInfo.title || 'Untitled',
+                    page_title: conv.title || conversationInfo.title || '',
+                    messages: messages,
+                    meta: {
+                        user_agent: navigator.userAgent,
+                        language: navigator.language,
+                        viewport: { 
+                            width: window.innerWidth, 
+                            height: window.innerHeight 
+                        },
+                        source: 'batch_sync',
+                        version: '1.1.0',
+                        batch_sync: true,
+                        conversation_create_time: conversationInfo.create_time,
+                        conversation_update_time: conversationInfo.update_time
+                    }
+                };
+                
+                // 检查是否已存在
+                const textForHash = messages.map(m => `${m.role}:${m.text}`).join('\n');
+                const curHash = this.generateHash(textForHash);
+                const hashKey = `chat_syncer.lasthash::${record.chat_id}`;
+                const lastHash = GM_getValue(hashKey, '');
+                
+                if (lastHash === curHash) {
+                    throw new Error('对话已存在，跳过');
+                }
+                
+                // 上传到 Supabase
+                await ChatGPTModule.ChatSyncer.uploadToSupabase(record);
+                GM_setValue(hashKey, curHash);
+            },
+            
+            generateHash(text) {
+                return ChatGPTModule.DataExtractor.generateHash(text);
+            }
+        },
+
         // Keyboard shortcut handler
         setupKeyboardShortcut() {
             document.addEventListener('keydown', (event) => {
@@ -468,14 +862,22 @@
                 return;
             }
 
-            // Create sync button
-            const syncButton = this.UI.createSyncButton();
-            document.body.appendChild(syncButton);
-
-            // Setup keyboard shortcut
-            this.setupKeyboardShortcut();
-
-            console.log('ChatGPT Supabase Syncer 已加载 (统一版本)');
+            const pageType = PageDetector.getCurrentPageType();
+            
+            if (pageType === 'chatgpt_home') {
+                // 主页：显示批量同步按钮
+                const batchSyncButton = this.UI.createBatchSyncButton();
+                document.body.appendChild(batchSyncButton);
+                console.log('ChatGPT 主页批量同步功能已加载');
+            } else if (pageType === 'chatgpt_conversation') {
+                // 对话页：显示普通同步按钮
+                const syncButton = this.UI.createSyncButton();
+                document.body.appendChild(syncButton);
+                
+                // Setup keyboard shortcut
+                this.setupKeyboardShortcut();
+                console.log('ChatGPT 对话页同步功能已加载');
+            }
         }
     };
 
@@ -798,7 +1200,8 @@
         const pageType = PageDetector.getCurrentPageType();
         
         switch (pageType) {
-            case 'chatgpt':
+            case 'chatgpt_home':
+            case 'chatgpt_conversation':
                 ChatGPTModule.init();
                 break;
             case 'supabase':
