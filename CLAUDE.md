@@ -2,6 +2,7 @@
 
 ## Git Workflow
 - When user says "push", always check for uncommitted changes first, then commit and push in sequence
+- 推之前确认版本号已经加一
 
 ## Project Setup
 - When first encountering a project, read README.md to understand the project structure and setup
