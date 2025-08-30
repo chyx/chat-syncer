@@ -129,7 +129,7 @@
                 button.innerHTML = 'Sync → Supabase';
                 button.style.cssText = `
                     position: fixed;
-                    bottom: 20px;
+                    bottom: 80px;
                     right: 20px;
                     z-index: 10000;
                     background: #10a37f;
@@ -164,7 +164,7 @@
                 button.id = 'batch-sync-btn';
                 button.style.cssText = `
                     position: fixed;
-                    bottom: 20px;
+                    bottom: 80px;
                     right: 20px;
                     z-index: 10000;
                     background: #7c3aed;
