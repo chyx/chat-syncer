@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.1.1
+// @version      1.1.2
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -622,6 +622,7 @@
                     // 创建上传记录
                     const record = {
                         collected_at: new Date().toISOString(),
+                        started_at: null, // 单个同步无法获取创建时间
                         chat_id: chatId,
                         chat_url: window.location.href,
                         chat_title: document.title,
@@ -635,7 +636,7 @@
                                 height: window.innerHeight 
                             },
                             source: 'unified_script',
-                            version: '1.1.0'
+                            version: '1.1.2'
                         }
                     };
 
@@ -802,6 +803,7 @@
                 // 创建上传记录
                 const record = {
                     collected_at: new Date().toISOString(),
+                    started_at: new Date(conversationInfo.create_time * 1000).toISOString(),
                     chat_id: conv.id || conversationInfo.id,
                     chat_url: `https://chatgpt.com/c/${conversationInfo.id}`,
                     chat_title: conv.title || conversationInfo.title || 'Untitled',
@@ -815,7 +817,7 @@
                             height: window.innerHeight 
                         },
                         source: 'batch_sync',
-                        version: '1.1.0',
+                        version: '1.1.2',
                         batch_sync: true,
                         conversation_create_time: conversationInfo.create_time,
                         conversation_update_time: conversationInfo.update_time
