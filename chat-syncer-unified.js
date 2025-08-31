@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.1.3
+// @version      1.1.5
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -641,7 +641,7 @@
                                 height: window.innerHeight 
                             },
                             source: 'unified_script',
-                            version: '1.1.3'
+                            version: '1.1.5'
                         }
                     };
 
@@ -710,6 +710,20 @@
         BatchSyncer: {
             isRunning: false,
             shouldCancel: false,
+            
+            // 安全地转换时间戳为ISO字符串
+            safeTimestampToISO(timestamp) {
+                // 只排除 null、undefined 和 NaN，但保留有效的 0
+                if (timestamp == null || isNaN(timestamp)) return null;
+                try {
+                    const date = new Date(timestamp * 1000);
+                    if (isNaN(date.getTime())) return null;
+                    return date.toISOString();
+                } catch (error) {
+                    console.warn('时间戳转换失败:', timestamp, error);
+                    return null;
+                }
+            },
             
             async startBatchSync() {
                 if (this.isRunning) {
@@ -844,7 +858,7 @@
                 // 创建上传记录
                 const record = {
                     collected_at: new Date().toISOString(),
-                    started_at: new Date(conversationInfo.create_time * 1000).toISOString(),
+                    started_at: this.safeTimestampToISO(conversationInfo.create_time),
                     chat_id: conv.id || conversationInfo.id,
                     chat_url: `https://chatgpt.com/c/${conversationInfo.id}`,
                     chat_title: conv.title || conversationInfo.title || 'Untitled',
@@ -858,7 +872,7 @@
                             height: window.innerHeight 
                         },
                         source: 'batch_sync',
-                        version: '1.1.3',
+                        version: '1.1.5',
                         batch_sync: true,
                         conversation_create_time: conversationInfo.create_time,
                         conversation_update_time: conversationInfo.update_time
