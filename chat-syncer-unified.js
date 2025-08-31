@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.1.2
+// @version      1.1.3
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -240,6 +240,11 @@
                         <div>✅ <span id="success-count">0</span> 条成功</div>
                         <div>❌ <span id="error-count">0</span> 条失败</div>
                         <div>⏭️ <span id="skip-count">0</span> 条跳过</div>
+                    </div>
+                    
+                    <div id="error-details" style="margin-bottom: 16px; max-height: 120px; overflow-y: auto; background: #fef2f2; border-radius: 6px; padding: 8px; font-size: 12px; display: none;">
+                        <div style="font-weight: 600; margin-bottom: 4px; color: #dc2626;">失败详情：</div>
+                        <div id="error-list" style="line-height: 1.4;"></div>
                     </div>
                     
                     <div style="text-align: center;">
@@ -636,7 +641,7 @@
                                 height: window.innerHeight 
                             },
                             source: 'unified_script',
-                            version: '1.1.2'
+                            version: '1.1.3'
                         }
                     };
 
@@ -671,11 +676,30 @@
                             if (response.status >= 200 && response.status < 300) {
                                 resolve(response);
                             } else {
-                                reject(new Error(`HTTP ${response.status}: ${response.responseText}`));
+                                let errorMessage = `HTTP ${response.status}`;
+                                
+                                // 尝试解析错误响应
+                                try {
+                                    const errorData = JSON.parse(response.responseText);
+                                    if (errorData.message) {
+                                        errorMessage += `: ${errorData.message}`;
+                                    } else if (errorData.hint) {
+                                        errorMessage += `: ${errorData.hint}`;
+                                    } else if (errorData.details) {
+                                        errorMessage += `: ${errorData.details}`;
+                                    } else {
+                                        errorMessage += `: ${response.responseText}`;
+                                    }
+                                } catch (e) {
+                                    // 如果解析失败，使用原始响应文本
+                                    errorMessage += `: ${response.responseText}`;
+                                }
+                                
+                                reject(new Error(errorMessage));
                             }
                         },
                         onerror: function(error) {
-                            reject(new Error('Network error: ' + error));
+                            reject(new Error('网络错误 - 无法连接到 Supabase 服务器'));
                         }
                     });
                 });
@@ -716,8 +740,11 @@
                 const successCount = modal.querySelector('#success-count');
                 const errorCount = modal.querySelector('#error-count');
                 const skipCount = modal.querySelector('#skip-count');
+                const errorDetails = modal.querySelector('#error-details');
+                const errorList = modal.querySelector('#error-list');
                 
                 let stats = { success: 0, error: 0, skip: 0 };
+                let errorMessages = [];
                 
                 cancelBtn.onclick = () => {
                     this.shouldCancel = true;
@@ -768,6 +795,14 @@
                             } else {
                                 stats.error++;
                                 errorCount.textContent = stats.error;
+                                
+                                // 记录失败详情
+                                const errorDetail = `• "${conv.title || 'Untitled'}": ${error.message}`;
+                                errorMessages.push(errorDetail);
+                                
+                                // 显示错误详情区域
+                                errorDetails.style.display = 'block';
+                                errorList.innerHTML = errorMessages.join('<br>');
                             }
                         }
                         
@@ -784,6 +819,12 @@
                     progressText.textContent = '同步失败: ' + error.message;
                     stats.error++;
                     errorCount.textContent = stats.error;
+                    
+                    // 显示批量同步失败的具体原因
+                    const errorDetail = `• 批量同步失败: ${error.message}`;
+                    errorMessages.push(errorDetail);
+                    errorDetails.style.display = 'block';
+                    errorList.innerHTML = errorMessages.join('<br>');
                 } finally {
                     cancelBtn.style.display = 'none';
                     closeBtn.style.display = 'inline-block';
@@ -817,7 +858,7 @@
                             height: window.innerHeight 
                         },
                         source: 'batch_sync',
-                        version: '1.1.2',
+                        version: '1.1.3',
                         batch_sync: true,
                         conversation_create_time: conversationInfo.create_time,
                         conversation_update_time: conversationInfo.update_time
