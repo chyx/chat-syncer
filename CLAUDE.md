@@ -1,8 +1,13 @@
 # Claude Code Instructions
 
 ## Git Workflow
-- When user says "push", always check for uncommitted changes first, then commit and push in sequence
-- 推之前确认版本号已经加一
+- When user says "push", follow these steps in sequence:
+  1. Check for uncommitted changes (git status)
+  2. Confirm version number has been incremented in package.json
+  3. Run `npm test` to verify functionality
+  4. Run `npm run build` to generate chat-syncer-unified.js
+  5. Commit all changes
+  6. Push to remote
 
 ## Project Setup
 - When first encountering a project, read README.md to understand the project structure and setup
