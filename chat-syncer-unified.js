@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.2.3
+// @version      1.2.4
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -138,12 +138,18 @@ const PageDetector = {
 
     isChatGPTHomePage() {
         const url = location.href;
-        // 主页：不包含 /c/ 的都算主页
-        return this.isChatGPTPage() && !url.includes('/c/') && !url.includes('/share/');
+        const isChatGPT = this.isChatGPTPage();
+        const hasConv = url.includes('/c/');
+        const hasShare = url.includes('/share/');
+        const result = isChatGPT && !hasConv && !hasShare;
+        console.log('isChatGPTHomePage check:', { url, isChatGPT, hasConv, hasShare, result });
+        return result;
     },
 
     isChatGPTConversationPage() {
-        return this.isChatGPTPage() && location.href.includes('/c/');
+        const result = this.isChatGPTPage() && location.href.includes('/c/');
+        console.log('isChatGPTConversationPage check:', { url: location.href, result });
+        return result;
     },
 
     isSupabasePage() {
@@ -764,7 +770,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.2.3'
+                        version: '1.2.4'
                     }
                 };
 
@@ -1035,6 +1041,8 @@ const ChatGPTModule = {
     // Initialize ChatGPT functionality
     init() {
         console.log('ChatGPT Module initializing...');
+        console.log('Document ready state:', document.readyState);
+        console.log('Current URL:', location.href);
 
         // Wait for page to load
         if (document.readyState === 'loading') {
@@ -1046,20 +1054,29 @@ const ChatGPTModule = {
         injectThemeCSS();
 
         const pageType = PageDetector.getCurrentPageType();
+        console.log('Detected page type:', pageType);
 
         if (pageType === 'chatgpt_home') {
             // 主页：显示批量同步按钮
+            console.log('Creating batch sync button...');
             const batchSyncButton = this.UI.createBatchSyncButton();
+            console.log('Batch sync button created:', batchSyncButton);
+            console.log('Appending to body...');
             document.body.appendChild(batchSyncButton);
-            console.log('ChatGPT 主页批量同步功能已加载');
+            console.log('✅ ChatGPT 主页批量同步功能已加载');
+            console.log('Button in DOM:', document.getElementById('batch-sync-container'));
         } else if (pageType === 'chatgpt_conversation') {
             // 对话页：显示普通同步按钮
+            console.log('Creating sync button...');
             const syncButton = this.UI.createSyncButton();
+            console.log('Sync button created:', syncButton);
             document.body.appendChild(syncButton);
 
             // Setup keyboard shortcut
             this.setupKeyboardShortcut();
-            console.log('ChatGPT 对话页同步功能已加载');
+            console.log('✅ ChatGPT 对话页同步功能已加载');
+        } else {
+            console.log('⚠️ Page type not recognized, no button will be added');
         }
     }
 };

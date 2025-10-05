@@ -603,7 +603,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.2.3'
+                        version: '1.2.4'
                     }
                 };
 
@@ -874,6 +874,8 @@ const ChatGPTModule = {
     // Initialize ChatGPT functionality
     init() {
         console.log('ChatGPT Module initializing...');
+        console.log('Document ready state:', document.readyState);
+        console.log('Current URL:', location.href);
 
         // Wait for page to load
         if (document.readyState === 'loading') {
@@ -885,20 +887,29 @@ const ChatGPTModule = {
         injectThemeCSS();
 
         const pageType = PageDetector.getCurrentPageType();
+        console.log('Detected page type:', pageType);
 
         if (pageType === 'chatgpt_home') {
             // 主页：显示批量同步按钮
+            console.log('Creating batch sync button...');
             const batchSyncButton = this.UI.createBatchSyncButton();
+            console.log('Batch sync button created:', batchSyncButton);
+            console.log('Appending to body...');
             document.body.appendChild(batchSyncButton);
-            console.log('ChatGPT 主页批量同步功能已加载');
+            console.log('✅ ChatGPT 主页批量同步功能已加载');
+            console.log('Button in DOM:', document.getElementById('batch-sync-container'));
         } else if (pageType === 'chatgpt_conversation') {
             // 对话页：显示普通同步按钮
+            console.log('Creating sync button...');
             const syncButton = this.UI.createSyncButton();
+            console.log('Sync button created:', syncButton);
             document.body.appendChild(syncButton);
 
             // Setup keyboard shortcut
             this.setupKeyboardShortcut();
-            console.log('ChatGPT 对话页同步功能已加载');
+            console.log('✅ ChatGPT 对话页同步功能已加载');
+        } else {
+            console.log('⚠️ Page type not recognized, no button will be added');
         }
     }
 };

@@ -118,12 +118,18 @@ const PageDetector = {
 
     isChatGPTHomePage() {
         const url = location.href;
-        // 主页：不包含 /c/ 的都算主页
-        return this.isChatGPTPage() && !url.includes('/c/') && !url.includes('/share/');
+        const isChatGPT = this.isChatGPTPage();
+        const hasConv = url.includes('/c/');
+        const hasShare = url.includes('/share/');
+        const result = isChatGPT && !hasConv && !hasShare;
+        console.log('isChatGPTHomePage check:', { url, isChatGPT, hasConv, hasShare, result });
+        return result;
     },
 
     isChatGPTConversationPage() {
-        return this.isChatGPTPage() && location.href.includes('/c/');
+        const result = this.isChatGPTPage() && location.href.includes('/c/');
+        console.log('isChatGPTConversationPage check:', { url: location.href, result });
+        return result;
     },
 
     isSupabasePage() {
