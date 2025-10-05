@@ -94,7 +94,7 @@ create policy "anon can update" on public.chat_logs
   for update to anon using (true) with check (true);
 ```
 
-### Migration: Add Unique Constraint for UPSERT
+### Migration 1: Add Unique Constraint for UPSERT
 
 **If you already have data**, run this migration to prevent duplicates:
 
@@ -115,6 +115,45 @@ After this migration, the syncer will automatically:
 - **Insert** new conversations
 - **Update** existing conversations (based on chat_id)
 - Prevent duplicate entries
+
+### Migration 2: Use Conversation Create Time for created_at
+
+**Update existing records** to use the actual conversation creation time instead of sync time:
+
+```sql
+-- Update created_at to use conversation_create_time from meta
+UPDATE public.chat_logs
+SET created_at = (meta->>'conversation_create_time')::timestamptz
+WHERE meta IS NOT NULL
+  AND meta->>'conversation_create_time' IS NOT NULL
+  AND meta->>'conversation_create_time' != '';
+```
+
+After this migration:
+- `created_at` reflects the **actual conversation creation time** (from ChatGPT)
+- `collected_at` remains as the **sync time** (when data was captured)
+- New syncs automatically use conversation creation time for `created_at`
+
+### Example Query with Timezone Conversion
+
+```sql
+SELECT
+    ((meta->>'conversation_create_time')::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai')::timestamp as real_chat_time,
+    chat_title,
+    COALESCE(
+        CASE
+            WHEN messages->0->>'role' = 'user' AND LENGTH(TRIM(messages->0->>'text')) > 0
+            THEN LEFT(messages->0->>'text', 50)
+            WHEN messages->1->>'role' = 'user' AND LENGTH(TRIM(messages->1->>'text')) > 0
+            THEN LEFT(messages->1->>'text', 50)
+            ELSE NULL
+        END,
+        '(无用户问题)'
+    ) as first_question
+FROM chat_logs
+WHERE DATE(created_at AT TIME ZONE 'Asia/Shanghai') = '2025-10-05'
+ORDER BY created_at;
+```
 
 ## Data Format
 

@@ -677,7 +677,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.2'
+                        version: '1.3.3'
                     }
                 };
 
@@ -893,9 +893,11 @@ const ChatGPTModule = {
             }
 
             // 创建上传记录
+            const createTime = this.safeTimestampToISO(conversationInfo.create_time);
             const record = {
+                created_at: createTime || new Date().toISOString(), // 使用对话创建时间，fallback 到当前时间
                 collected_at: new Date().toISOString(),
-                started_at: this.safeTimestampToISO(conversationInfo.create_time),
+                started_at: createTime,
                 chat_id: conv.id || conversationInfo.id,
                 chat_url: `https://chatgpt.com/c/${conversationInfo.id}`,
                 chat_title: conv.title || conversationInfo.title || 'Untitled',
