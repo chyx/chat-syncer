@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.2.5
+// @version      1.2.6
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -299,7 +299,7 @@ const ChatGPTModule = {
 
             let hoverTimer = null;
 
-            container.onmouseover = () => {
+            container.onmouseenter = () => {
                 clearTimeout(hoverTimer);
                 button.style.background = '#6d28d9';
                 button.style.transform = 'translateY(-2px)';
@@ -311,13 +311,17 @@ const ChatGPTModule = {
                 }, 300);
             };
 
-            container.onmouseout = () => {
+            container.onmouseleave = () => {
                 clearTimeout(hoverTimer);
                 button.style.background = '#7c3aed';
                 button.style.transform = 'translateY(0)';
                 button.style.boxShadow = '0 4px 12px rgba(124,58,237,0.3)';
-                optionsMenu.style.opacity = '0';
-                optionsMenu.style.visibility = 'hidden';
+
+                // 延迟关闭菜单，给用户时间移动到菜单上
+                setTimeout(() => {
+                    optionsMenu.style.opacity = '0';
+                    optionsMenu.style.visibility = 'hidden';
+                }, 200);
             };
 
             button.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync(20);
@@ -770,7 +774,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.2.5'
+                        version: '1.2.6'
                     }
                 };
 
