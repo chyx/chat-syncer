@@ -9,11 +9,13 @@ This userscript allows you to capture and sync ChatGPT conversations directly fr
 ## Features
 
 - 🚀 One-click sync to Supabase
-- 🔄 API-first approach with DOM fallback 
+- 📚 Batch sync up to 20 recent conversations from homepage
+- 🔄 API-first approach with DOM fallback
 - ⌨️ Keyboard shortcut support (Ctrl/⌘+Shift+S)
 - 🔒 Duplicate detection and prevention
 - 📱 Support for regular and shared ChatGPT links
 - 🎯 Clean data extraction (removes UI clutter)
+- 🌙 Dark mode support
 
 ## Quick Start
 
@@ -24,30 +26,37 @@ This userscript allows you to capture and sync ChatGPT conversations directly fr
 
 ## Installation
 
-### Unified Script (Recommended)
+### Direct Install (Recommended)
 Install directly from the raw GitHub URL in your userscript manager:
 - **Direct install**: `https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js`
 - **Auto-updates**: Enabled via @updateURL and @downloadURL directives
 
-Or copy the complete userscript from `chat-syncer-unified.js` and paste it into your userscript manager. This single script includes both ChatGPT syncing and Supabase config helper functionality.
-
-### Legacy Scripts (Deprecated)
-The original separate scripts (`userscript.js` and `supabase-config.js`) are still available but the unified script is now the single source of truth.
+The unified script includes both ChatGPT syncing and Supabase config helper functionality.
 
 ## Usage
 
 ### Easy Configuration (Recommended)
-1. Install the unified userscript (`chat-syncer-unified.js`)
+1. Install the unified userscript
 2. Go to your Supabase project → Settings → API
 3. Click the "🚀 配置 ChatGPT Syncer" button (top-right)
 4. Click "🚀 直接保存配置" - no copying needed!
-5. Go to ChatGPT and sync your first conversation
+5. Go to ChatGPT and start syncing
 
-### Manual Configuration
+### Single Conversation Sync
 - Navigate to any ChatGPT conversation
 - Click the "Sync → Supabase" button (bottom-right corner)
 - Or use keyboard shortcut: `Ctrl/⌘ + Shift + S`
-- Fill in the configuration form with your Supabase URL, API key, and table name
+
+### Batch Sync (20 Recent Conversations)
+- Go to ChatGPT homepage (https://chatgpt.com/)
+- Click the "📚 批量同步最近20条" button (bottom-right corner)
+- Monitor progress in the popup modal
+- Duplicate conversations are automatically skipped
+
+### Manual Configuration
+If auto-detection fails, you can manually configure:
+- Click sync button on any ChatGPT page
+- Fill in Supabase URL, API key, and table name in the modal
 
 ## Database Schema
 
@@ -61,6 +70,7 @@ create table if not exists public.chat_logs (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   collected_at timestamptz,
+  started_at timestamptz,
   chat_id text,
   chat_url text not null,
   chat_title text,
@@ -103,12 +113,13 @@ The `chat_logs` table structure:
 | `id` | uuid | Primary key, auto-generated |
 | `created_at` | timestamptz | Record creation timestamp |
 | `collected_at` | timestamptz | When conversation was captured |
+| `started_at` | timestamptz | When conversation was started (from ChatGPT API) |
 | `chat_id` | text | ChatGPT conversation ID |
 | `chat_url` | text | Full URL of the conversation |
 | `chat_title` | text | Conversation title |
 | `page_title` | text | HTML page title |
 | `messages` | jsonb | Array of conversation messages |
-| `meta` | jsonb | Client metadata (UA, source, etc.) |
+| `meta` | jsonb | Client metadata (UA, source, batch_sync, etc.) |
 
 ### Indexes Created
 - `chat_logs_created_at_idx`: B-tree on created_at (DESC) for time-based queries
@@ -121,7 +132,27 @@ The `chat_logs` table structure:
 
 ## Development
 
-See `gpt.md` for detailed implementation notes and upgrade history.
+### Project Structure
+```
+src/
+├── config.js       - Theme, CONFIG, PageDetector
+├── chatgpt.js      - ChatGPT module (UI, batch sync, data extraction)
+├── supabase.js     - Supabase module (config helper, auto-detection)
+└── main.js         - Initialization logic
+
+build.js            - Build script to generate chat-syncer-unified.js
+```
+
+### Building
+```bash
+npm run build       # Generate chat-syncer-unified.js from source files
+npm test           # Run test suite
+```
+
+The `chat-syncer-unified.js` file is generated from source files in `src/`. Always edit source files, not the generated file.
+
+### Version Management
+Version is managed in `package.json` and automatically injected into the userscript header during build.
 
 ## License
 

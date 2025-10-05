@@ -40,14 +40,19 @@ const ChatGPTModule = {
         },
 
         createBatchSyncButton() {
-            const button = document.createElement('button');
-            button.innerHTML = '📚 批量同步最近20条';
-            button.id = 'batch-sync-btn';
-            button.style.cssText = `
+            const container = document.createElement('div');
+            container.id = 'batch-sync-container';
+            container.style.cssText = `
                 position: fixed;
                 bottom: 80px;
                 right: 20px;
                 z-index: 10000;
+            `;
+
+            const button = document.createElement('button');
+            button.innerHTML = '📚 批量同步最近20条';
+            button.id = 'batch-sync-btn';
+            button.style.cssText = `
                 background: #7c3aed;
                 color: white;
                 border: none;
@@ -60,22 +65,95 @@ const ChatGPTModule = {
                 transition: all 0.2s ease;
                 min-width: 180px;
                 text-align: center;
+                display: block;
             `;
 
-            button.onmouseover = () => {
+            const optionsMenu = document.createElement('div');
+            optionsMenu.id = 'batch-sync-options';
+            optionsMenu.style.cssText = `
+                position: absolute;
+                bottom: 100%;
+                right: 0;
+                margin-bottom: 8px;
+                background: var(--surface-primary, white);
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                min-width: 200px;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.2s ease;
+                overflow: hidden;
+            `;
+
+            const options = [
+                { label: '批量同步最近50条', limit: 50 },
+                { label: '批量同步最近100条', limit: 100 },
+                { label: '批量同步最近200条', limit: 200 }
+            ];
+
+            options.forEach((opt, idx) => {
+                const optionBtn = document.createElement('button');
+                optionBtn.textContent = opt.label;
+                optionBtn.style.cssText = `
+                    width: 100%;
+                    padding: 12px 16px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-primary, #374151);
+                    text-align: left;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: background 0.15s ease;
+                    ${idx < options.length - 1 ? 'border-bottom: 1px solid #f3f4f6;' : ''}
+                `;
+
+                optionBtn.onmouseover = () => {
+                    optionBtn.style.background = '#f3f4f6';
+                };
+
+                optionBtn.onmouseout = () => {
+                    optionBtn.style.background = 'transparent';
+                };
+
+                optionBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    optionsMenu.style.opacity = '0';
+                    optionsMenu.style.visibility = 'hidden';
+                    ChatGPTModule.BatchSyncer.startBatchSync(opt.limit);
+                };
+
+                optionsMenu.appendChild(optionBtn);
+            });
+
+            container.appendChild(optionsMenu);
+            container.appendChild(button);
+
+            let hoverTimer = null;
+
+            container.onmouseover = () => {
+                clearTimeout(hoverTimer);
                 button.style.background = '#6d28d9';
                 button.style.transform = 'translateY(-2px)';
                 button.style.boxShadow = '0 6px 16px rgba(124,58,237,0.4)';
+
+                hoverTimer = setTimeout(() => {
+                    optionsMenu.style.opacity = '1';
+                    optionsMenu.style.visibility = 'visible';
+                }, 300);
             };
 
-            button.onmouseout = () => {
+            container.onmouseout = () => {
+                clearTimeout(hoverTimer);
                 button.style.background = '#7c3aed';
                 button.style.transform = 'translateY(0)';
                 button.style.boxShadow = '0 4px 12px rgba(124,58,237,0.3)';
+                optionsMenu.style.opacity = '0';
+                optionsMenu.style.visibility = 'hidden';
             };
 
-            button.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync();
-            return button;
+            button.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync(20);
+            return container;
         },
 
         createProgressModal() {
@@ -608,7 +686,7 @@ const ChatGPTModule = {
             }
         },
 
-        async startBatchSync() {
+        async startBatchSync(limit = 20) {
             if (this.isRunning) {
                 ChatGPTModule.UI.showStatus('批量同步正在进行中...', 'info');
                 return;
@@ -656,8 +734,8 @@ const ChatGPTModule = {
 
             try {
                 // 获取对话列表
-                progressText.textContent = '正在获取对话列表...';
-                const conversations = await ChatGPTModule.BatchFetcher.getConversationsList(20);
+                progressText.textContent = `正在获取最近${limit}条对话...`;
+                const conversations = await ChatGPTModule.BatchFetcher.getConversationsList(limit);
 
                 if (conversations.length === 0) {
                     progressText.textContent = '没有找到对话';
