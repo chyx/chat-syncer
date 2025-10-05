@@ -688,7 +688,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.4'
+                        version: '1.3.5'
                     }
                 };
 
@@ -706,7 +706,7 @@ const ChatGPTModule = {
         },
 
         async uploadToSupabase(record) {
-            const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/${CONFIG.get('TABLE_NAME')}`;
+            const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/${CONFIG.get('TABLE_NAME')}?on_conflict=chat_id`;
 
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
