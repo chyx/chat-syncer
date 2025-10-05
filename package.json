@@ -1,6 +1,6 @@
 {
   "name": "chat-syncer",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "A Tampermonkey userscript for syncing ChatGPT conversations to Supabase database",
   "main": "userscript.js",
   "scripts": {
