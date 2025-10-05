@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.2.6
+// @version      1.3.0
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -214,13 +214,15 @@ const ChatGPTModule = {
                 bottom: 80px;
                 right: 20px;
                 z-index: 10000;
-                display: block;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
             `;
 
-            const button = document.createElement('button');
-            button.innerHTML = '📚 批量同步最近20条';
-            button.id = 'batch-sync-btn';
-            button.style.cssText = `
+            // 快速同步按钮（默认20条）
+            const quickButton = document.createElement('button');
+            quickButton.innerHTML = '📚 批量同步最近20条';
+            quickButton.style.cssText = `
                 background: #7c3aed;
                 color: white;
                 border: none;
@@ -233,99 +235,150 @@ const ChatGPTModule = {
                 transition: all 0.2s ease;
                 min-width: 180px;
                 text-align: center;
-                display: block;
             `;
 
-            const optionsMenu = document.createElement('div');
-            optionsMenu.id = 'batch-sync-options';
-            optionsMenu.style.cssText = `
-                position: absolute;
-                bottom: 100%;
-                right: 0;
-                margin-bottom: 8px;
-                background: var(--surface-primary, white);
-                border: 1px solid #e5e7eb;
+            quickButton.onmouseover = () => {
+                quickButton.style.background = '#6d28d9';
+                quickButton.style.transform = 'translateY(-2px)';
+                quickButton.style.boxShadow = '0 6px 16px rgba(124,58,237,0.4)';
+            };
+
+            quickButton.onmouseout = () => {
+                quickButton.style.background = '#7c3aed';
+                quickButton.style.transform = 'translateY(0)';
+                quickButton.style.boxShadow = '0 4px 12px rgba(124,58,237,0.3)';
+            };
+
+            quickButton.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20);
+
+            // 自定义同步按钮
+            const customButton = document.createElement('button');
+            customButton.innerHTML = '⚙️ 自定义同步';
+            customButton.style.cssText = `
+                background: #059669;
+                color: white;
+                border: none;
+                padding: 12px 20px;
                 border-radius: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                min-width: 200px;
-                opacity: 0;
-                visibility: hidden;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(5,150,105,0.3);
                 transition: all 0.2s ease;
-                overflow: hidden;
+                min-width: 180px;
+                text-align: center;
             `;
 
-            const options = [
-                { label: '批量同步最近50条', limit: 50 },
-                { label: '批量同步最近100条', limit: 100 },
-                { label: '批量同步最近200条', limit: 200 }
-            ];
+            customButton.onmouseover = () => {
+                customButton.style.background = '#047857';
+                customButton.style.transform = 'translateY(-2px)';
+                customButton.style.boxShadow = '0 6px 16px rgba(5,150,105,0.4)';
+            };
 
-            options.forEach((opt, idx) => {
-                const optionBtn = document.createElement('button');
-                optionBtn.textContent = opt.label;
-                optionBtn.style.cssText = `
-                    width: 100%;
-                    padding: 12px 16px;
-                    border: none;
-                    background: transparent;
-                    color: var(--text-primary, #374151);
-                    text-align: left;
-                    cursor: pointer;
-                    font-size: 14px;
-                    transition: background 0.15s ease;
-                    ${idx < options.length - 1 ? 'border-bottom: 1px solid #f3f4f6;' : ''}
-                `;
+            customButton.onmouseout = () => {
+                customButton.style.background = '#059669';
+                customButton.style.transform = 'translateY(0)';
+                customButton.style.boxShadow = '0 4px 12px rgba(5,150,105,0.3)';
+            };
 
-                optionBtn.onmouseover = () => {
-                    optionBtn.style.background = '#f3f4f6';
-                };
+            customButton.onclick = () => this.showCustomSyncModal();
 
-                optionBtn.onmouseout = () => {
-                    optionBtn.style.background = 'transparent';
-                };
+            container.appendChild(quickButton);
+            container.appendChild(customButton);
+            return container;
+        },
 
-                optionBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    optionsMenu.style.opacity = '0';
-                    optionsMenu.style.visibility = 'hidden';
-                    ChatGPTModule.BatchSyncer.startBatchSync(opt.limit);
-                };
+        showCustomSyncModal() {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10004;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
 
-                optionsMenu.appendChild(optionBtn);
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: var(--surface-primary, white);
+                color: var(--text-primary, #000);
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            `;
+
+            modal.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: var(--text-primary, #1f2937);">自定义批量同步</h3>
+                    <p style="margin: 0; font-size: 14px; color: var(--text-secondary, #6b7280);">设置同步的起始位置和数量</p>
+                </div>
+
+                <form id="customSyncForm">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: var(--text-primary, #374151); margin-bottom: 6px;">
+                            Offset (起始位置)
+                        </label>
+                        <input type="number" id="syncOffset" value="0" min="0" step="1"
+                               style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                        <small style="color: var(--text-secondary, #6b7280); font-size: 12px;">从第几条开始（0表示从最新的开始）</small>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 500; color: var(--text-primary, #374151); margin-bottom: 6px;">
+                            Limit (同步数量)
+                        </label>
+                        <input type="number" id="syncLimit" value="20" min="1" max="500" step="1"
+                               style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+                        <small style="color: var(--text-secondary, #6b7280); font-size: 12px;">要同步的对话数量（最多500条）</small>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button type="button" id="cancelCustomSync"
+                                style="padding: 10px 16px; border: 1px solid #d1d5db; background: var(--surface-secondary, white); color: var(--text-primary, #374151); border-radius: 6px; font-size: 14px; cursor: pointer;">
+                            取消
+                        </button>
+                        <button type="submit"
+                                style="padding: 10px 16px; border: none; background: #059669; color: white; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                            开始同步
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            const form = modal.querySelector('#customSyncForm');
+            const cancelBtn = modal.querySelector('#cancelCustomSync');
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const offset = parseInt(document.getElementById('syncOffset').value) || 0;
+                const limit = parseInt(document.getElementById('syncLimit').value) || 20;
+                document.body.removeChild(overlay);
+                ChatGPTModule.BatchSyncer.startBatchSync(offset, limit);
             });
 
-            container.appendChild(optionsMenu);
-            container.appendChild(button);
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(overlay);
+            });
 
-            let hoverTimer = null;
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
 
-            container.onmouseenter = () => {
-                clearTimeout(hoverTimer);
-                button.style.background = '#6d28d9';
-                button.style.transform = 'translateY(-2px)';
-                button.style.boxShadow = '0 6px 16px rgba(124,58,237,0.4)';
-
-                hoverTimer = setTimeout(() => {
-                    optionsMenu.style.opacity = '1';
-                    optionsMenu.style.visibility = 'visible';
-                }, 300);
-            };
-
-            container.onmouseleave = () => {
-                clearTimeout(hoverTimer);
-                button.style.background = '#7c3aed';
-                button.style.transform = 'translateY(0)';
-                button.style.boxShadow = '0 4px 12px rgba(124,58,237,0.3)';
-
-                // 延迟关闭菜单，给用户时间移动到菜单上
-                setTimeout(() => {
-                    optionsMenu.style.opacity = '0';
-                    optionsMenu.style.visibility = 'hidden';
-                }, 200);
-            };
-
-            button.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync(20);
-            return container;
+            setTimeout(() => {
+                document.getElementById('syncLimit').focus();
+            }, 100);
         },
 
         createProgressModal() {
@@ -551,14 +604,14 @@ const ChatGPTModule = {
 
     // Batch conversation fetcher
     BatchFetcher: {
-        async getConversationsList(limit = 20) {
+        async getConversationsList(offset = 0, limit = 20) {
             const token = await this.getAccessToken();
             if (!token) {
                 throw new Error('无法获取访问令牌');
             }
 
             const apiBase = location.origin + '/backend-api';
-            const url = `${apiBase}/conversations?offset=0&limit=${limit}&order=updated`;
+            const url = `${apiBase}/conversations?offset=${offset}&limit=${limit}&order=updated`;
 
             return new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
@@ -774,7 +827,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.2.6'
+                        version: '1.3.0'
                     }
                 };
 
@@ -858,7 +911,7 @@ const ChatGPTModule = {
             }
         },
 
-        async startBatchSync(limit = 20) {
+        async startBatchSync(offset = 0, limit = 20) {
             if (this.isRunning) {
                 ChatGPTModule.UI.showStatus('批量同步正在进行中...', 'info');
                 return;
@@ -906,8 +959,9 @@ const ChatGPTModule = {
 
             try {
                 // 获取对话列表
-                progressText.textContent = `正在获取最近${limit}条对话...`;
-                const conversations = await ChatGPTModule.BatchFetcher.getConversationsList(limit);
+                const offsetText = offset > 0 ? `从第${offset + 1}条开始，` : '';
+                progressText.textContent = `正在获取对话列表（${offsetText}共${limit}条）...`;
+                const conversations = await ChatGPTModule.BatchFetcher.getConversationsList(offset, limit);
 
                 if (conversations.length === 0) {
                     progressText.textContent = '没有找到对话';
