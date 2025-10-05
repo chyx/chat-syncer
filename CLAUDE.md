@@ -3,7 +3,9 @@
 ## Git Workflow
 - When user says "push", follow these steps in sequence:
   1. Check for uncommitted changes (git status)
-  2. Confirm version number has been incremented in package.json
+  2. Confirm version number has been incremented in ALL locations:
+     - package.json (1 location)
+     - src/chatgpt.js (2 locations in meta.version fields)
   3. Run `npm test` to verify functionality
   4. Run `npm run build` to generate chat-syncer-unified.js
   5. Commit all changes
