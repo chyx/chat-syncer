@@ -118,12 +118,12 @@ const PageDetector = {
 
     isChatGPTHomePage() {
         const url = location.href;
-        return (url === 'https://chatgpt.com/' || url === 'https://chat.openai.com/' ||
-               url === 'https://chatgpt.com' || url === 'https://chat.openai.com');
+        // 主页：不包含 /c/ 的都算主页
+        return this.isChatGPTPage() && !url.includes('/c/') && !url.includes('/share/');
     },
 
     isChatGPTConversationPage() {
-        return this.isChatGPTPage() && !this.isChatGPTHomePage();
+        return this.isChatGPTPage() && location.href.includes('/c/');
     },
 
     isSupabasePage() {

@@ -603,7 +603,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.2.2'
+                        version: '1.2.3'
                     }
                 };
 

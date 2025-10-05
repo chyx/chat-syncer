@@ -1,17 +1,13 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.2.2
+// @version      1.2.3
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
 // @author       You
-// @match        https://chatgpt.com/c/*
-// @match        https://chat.openai.com/c/*
-// @match        https://chatgpt.com/share/*
-// @match        https://chat.openai.com/share/*
-// @match        https://chatgpt.com/
-// @match        https://chat.openai.com/
+// @match        https://chatgpt.com/*
+// @match        https://chat.openai.com/*
 // @match        https://supabase.com/dashboard/project/*
 // @match        https://app.supabase.com/project/*
 // @grant        GM_getValue
@@ -142,12 +138,12 @@ const PageDetector = {
 
     isChatGPTHomePage() {
         const url = location.href;
-        return (url === 'https://chatgpt.com/' || url === 'https://chat.openai.com/' ||
-               url === 'https://chatgpt.com' || url === 'https://chat.openai.com');
+        // 主页：不包含 /c/ 的都算主页
+        return this.isChatGPTPage() && !url.includes('/c/') && !url.includes('/share/');
     },
 
     isChatGPTConversationPage() {
-        return this.isChatGPTPage() && !this.isChatGPTHomePage();
+        return this.isChatGPTPage() && location.href.includes('/c/');
     },
 
     isSupabasePage() {
@@ -768,7 +764,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.2.2'
+                        version: '1.2.3'
                     }
                 };
 

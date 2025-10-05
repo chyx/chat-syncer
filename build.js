@@ -21,12 +21,8 @@ const header = `// ==UserScript==
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
 // @author       You
-// @match        https://chatgpt.com/c/*
-// @match        https://chat.openai.com/c/*
-// @match        https://chatgpt.com/share/*
-// @match        https://chat.openai.com/share/*
-// @match        https://chatgpt.com/
-// @match        https://chat.openai.com/
+// @match        https://chatgpt.com/*
+// @match        https://chat.openai.com/*
 // @match        https://supabase.com/dashboard/project/*
 // @match        https://app.supabase.com/project/*
 // @grant        GM_getValue
