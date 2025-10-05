@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.3.0
+// @version      1.3.1
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -251,7 +251,7 @@ const ChatGPTModule = {
 
             quickButton.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20);
 
-            // 自定义同步按钮
+            // 自定义同步按钮（默认隐藏）
             const customButton = document.createElement('button');
             customButton.innerHTML = '⚙️ 自定义同步';
             customButton.style.cssText = `
@@ -267,6 +267,10 @@ const ChatGPTModule = {
                 transition: all 0.2s ease;
                 min-width: 180px;
                 text-align: center;
+                opacity: 0;
+                visibility: hidden;
+                max-height: 0;
+                overflow: hidden;
             `;
 
             customButton.onmouseover = () => {
@@ -282,6 +286,19 @@ const ChatGPTModule = {
             };
 
             customButton.onclick = () => this.showCustomSyncModal();
+
+            // Hover 显示/隐藏自定义按钮
+            container.onmouseenter = () => {
+                customButton.style.opacity = '1';
+                customButton.style.visibility = 'visible';
+                customButton.style.maxHeight = '100px';
+            };
+
+            container.onmouseleave = () => {
+                customButton.style.opacity = '0';
+                customButton.style.visibility = 'hidden';
+                customButton.style.maxHeight = '0';
+            };
 
             container.appendChild(quickButton);
             container.appendChild(customButton);
@@ -334,9 +351,9 @@ const ChatGPTModule = {
                         <label style="display: block; font-size: 14px; font-weight: 500; color: var(--text-primary, #374151); margin-bottom: 6px;">
                             Limit (同步数量)
                         </label>
-                        <input type="number" id="syncLimit" value="20" min="1" max="500" step="1"
+                        <input type="number" id="syncLimit" value="20" min="1" max="100" step="1"
                                style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
-                        <small style="color: var(--text-secondary, #6b7280); font-size: 12px;">要同步的对话数量（最多500条）</small>
+                        <small style="color: var(--text-secondary, #6b7280); font-size: 12px;">要同步的对话数量（最多100条）</small>
                     </div>
 
                     <div style="display: flex; gap: 12px; justify-content: flex-end;">
@@ -827,7 +844,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.0'
+                        version: '1.3.1'
                     }
                 };
 
