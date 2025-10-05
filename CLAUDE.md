@@ -3,7 +3,7 @@
 ## Git Workflow
 - When user says "push", follow these steps in sequence:
   1. Check for uncommitted changes (git status)
-  2. Confirm version number has been incremented in ALL locations:
+  2. **IMPORTANT**: Increment version number in ALL locations (even for small changes - required for Tampermonkey auto-update):
      - package.json (1 location)
      - src/chatgpt.js (2 locations in meta.version fields)
   3. Run `npm test` to verify functionality
