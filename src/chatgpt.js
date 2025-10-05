@@ -272,9 +272,9 @@ const ChatGPTModule = {
                 </div>
 
                 <div id="sync-results" style="margin-bottom: 16px; font-size: 14px;">
-                    <div>✅ <span id="success-count">0</span> 条成功</div>
+                    <div>✅ <span id="success-count">0</span> 条新增</div>
+                    <div>🔄 <span id="skip-count">0</span> 条更新</div>
                     <div>❌ <span id="error-count">0</span> 条失败</div>
-                    <div>⏭️ <span id="skip-count">0</span> 条跳过</div>
                 </div>
 
                 <div id="error-details" style="margin-bottom: 16px; max-height: 120px; overflow-y: auto; background: #fef2f2; border-radius: 6px; padding: 8px; font-size: 12px; display: none;">
@@ -688,7 +688,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.5'
+                        version: '1.3.6'
                     }
                 };
 
@@ -716,7 +716,7 @@ const ChatGPTModule = {
                         'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
                         'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
                         'Content-Type': 'application/json',
-                        'Prefer': 'resolution=merge-duplicates,return=minimal'
+                        'Prefer': 'resolution=merge-duplicates,return=representation'
                     },
                     data: JSON.stringify(record),
                     onload: function(response) {
@@ -846,26 +846,26 @@ const ChatGPTModule = {
                     progressText.textContent = `正在处理: ${conv.title || 'Untitled'} (${i + 1}/${conversations.length})`;
 
                     try {
-                        await this.syncSingleConversation(conv);
-                        stats.success++;
-                        successCount.textContent = stats.success;
-                    } catch (error) {
-                        console.error(`同步对话 ${conv.id} 失败:`, error);
-                        if (error.message.includes('已存在')) {
-                            stats.skip++;
+                        const result = await this.syncSingleConversation(conv);
+                        if (result && result.isUpdate) {
+                            stats.skip++; // 更新操作计入"跳过"（实际是更新）
                             skipCount.textContent = stats.skip;
                         } else {
-                            stats.error++;
-                            errorCount.textContent = stats.error;
-
-                            // 记录失败详情
-                            const errorDetail = `• "${conv.title || 'Untitled'}": ${error.message}`;
-                            errorMessages.push(errorDetail);
-
-                            // 显示错误详情区域
-                            errorDetails.style.display = 'block';
-                            errorList.innerHTML = errorMessages.join('<br>');
+                            stats.success++; // 新插入操作
+                            successCount.textContent = stats.success;
                         }
+                    } catch (error) {
+                        console.error(`同步对话 ${conv.id} 失败:`, error);
+                        stats.error++;
+                        errorCount.textContent = stats.error;
+
+                        // 记录失败详情
+                        const errorDetail = `• "${conv.title || 'Untitled'}": ${error.message}`;
+                        errorMessages.push(errorDetail);
+
+                        // 显示错误详情区域
+                        errorDetails.style.display = 'block';
+                        errorList.innerHTML = errorMessages.join('<br>');
                     }
 
                     // 添加延迟避免API限流
@@ -873,7 +873,7 @@ const ChatGPTModule = {
                 }
 
                 if (!this.shouldCancel) {
-                    progressText.textContent = `同步完成！成功 ${stats.success} 条，失败 ${stats.error} 条，跳过 ${stats.skip} 条`;
+                    progressText.textContent = `同步完成！新增 ${stats.success} 条，更新 ${stats.skip} 条，失败 ${stats.error} 条`;
                 }
 
             } catch (error) {
@@ -930,7 +930,12 @@ const ChatGPTModule = {
             };
 
             // 上传到 Supabase (数据库会自动处理重复的chat_id)
-            await ChatGPTModule.ChatSyncer.uploadToSupabase(record);
+            const response = await ChatGPTModule.ChatSyncer.uploadToSupabase(record);
+
+            // 检查是否为更新操作（HTTP 200 且返回数据）
+            // INSERT 返回 201，UPDATE 返回 200
+            const isUpdate = response.status === 200;
+            return { isUpdate };
         }
     },
 
