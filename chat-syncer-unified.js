@@ -212,6 +212,7 @@ const ChatGPTModule = {
                 bottom: 80px;
                 right: 20px;
                 z-index: 10000;
+                display: block;
             `;
 
             const button = document.createElement('button');
