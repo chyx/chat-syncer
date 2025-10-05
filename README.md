@@ -94,9 +94,9 @@ create policy "anon can update" on public.chat_logs
   for update to anon using (true) with check (true);
 ```
 
-### Migration 1: Add Unique Constraint for UPSERT
+### Migration: Add Unique Constraint for UPSERT
 
-**If you already have data**, run this migration to prevent duplicates:
+**If you already have data**, run this migration to enable UPSERT and prevent duplicates:
 
 ```sql
 -- Step 1: Remove duplicate chat_ids (keep the newest record for each chat_id)
@@ -115,70 +115,6 @@ After this migration, the syncer will automatically:
 - **Insert** new conversations
 - **Update** existing conversations (based on chat_id)
 - Prevent duplicate entries
-
-### Migration 2: Use Conversation Create Time for created_at
-
-**Update existing records** to use the actual conversation creation time instead of sync time:
-
-```sql
--- Update created_at to use conversation_create_time from meta
-UPDATE public.chat_logs
-SET created_at = (meta->>'conversation_create_time')::timestamptz
-WHERE meta IS NOT NULL
-  AND meta->>'conversation_create_time' IS NOT NULL
-  AND meta->>'conversation_create_time' != '';
-```
-
-After this migration:
-- `created_at` reflects the **actual conversation creation time** (from ChatGPT)
-- `collected_at` remains as the **sync time** (when data was captured)
-- New syncs automatically use conversation creation time for `created_at`
-
-### Migration 3: Clean o1/o3 Metadata from Messages
-
-**Remove thinking process metadata** from o1/o3 conversations to save ~40% storage:
-
-```sql
--- Step 1: Clean o1/o3 metadata (thoughts, reasoning_recap, search_query, model_context)
-UPDATE public.chat_logs
-SET messages = (
-    SELECT jsonb_agg(msg ORDER BY (msg->>'idx')::int)
-    FROM jsonb_array_elements(messages) msg
-    WHERE
-        msg->>'role' = 'user'
-        OR
-        (
-            msg->>'role' = 'assistant'
-            AND msg->>'text' NOT LIKE '{%content_type%'
-            AND msg->>'text' NOT LIKE '{%search_query%'
-        )
-)
-WHERE messages IS NOT NULL;
-
--- Step 2: Reindex messages (ensure idx is sequential)
-UPDATE public.chat_logs
-SET messages = (
-    WITH indexed_msgs AS (
-        SELECT
-            jsonb_set(msg, '{idx}', to_jsonb(rn - 1)) as updated_msg
-        FROM (
-            SELECT
-                msg,
-                row_number() OVER (ORDER BY (msg->>'idx')::int) as rn
-            FROM jsonb_array_elements(messages) msg
-        ) numbered
-    )
-    SELECT jsonb_agg(updated_msg ORDER BY (updated_msg->>'idx')::int)
-    FROM indexed_msgs
-)
-WHERE messages IS NOT NULL;
-```
-
-After this migration:
-- Only user-visible messages are stored
-- o1/o3 thinking process, search queries, and context metadata are removed
-- Storage reduced by ~40% for o1/o3 conversations
-- New syncs automatically filter out metadata
 
 ### Example Query with Timezone Conversion
 
