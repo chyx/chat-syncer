@@ -134,11 +134,57 @@ After this migration:
 - `collected_at` remains as the **sync time** (when data was captured)
 - New syncs automatically use conversation creation time for `created_at`
 
+### Migration 3: Clean o1/o3 Metadata from Messages
+
+**Remove thinking process metadata** from o1/o3 conversations to save ~40% storage:
+
+```sql
+-- Step 1: Clean o1/o3 metadata (thoughts, reasoning_recap, search_query, model_context)
+UPDATE public.chat_logs
+SET messages = (
+    SELECT jsonb_agg(msg ORDER BY (msg->>'idx')::int)
+    FROM jsonb_array_elements(messages) msg
+    WHERE
+        msg->>'role' = 'user'
+        OR
+        (
+            msg->>'role' = 'assistant'
+            AND msg->>'text' NOT LIKE '{%content_type%'
+            AND msg->>'text' NOT LIKE '{%search_query%'
+        )
+)
+WHERE messages IS NOT NULL;
+
+-- Step 2: Reindex messages (ensure idx is sequential)
+UPDATE public.chat_logs
+SET messages = (
+    WITH indexed_msgs AS (
+        SELECT
+            jsonb_set(msg, '{idx}', to_jsonb(rn - 1)) as updated_msg
+        FROM (
+            SELECT
+                msg,
+                row_number() OVER (ORDER BY (msg->>'idx')::int) as rn
+            FROM jsonb_array_elements(messages) msg
+        ) numbered
+    )
+    SELECT jsonb_agg(updated_msg ORDER BY (updated_msg->>'idx')::int)
+    FROM indexed_msgs
+)
+WHERE messages IS NOT NULL;
+```
+
+After this migration:
+- Only user-visible messages are stored
+- o1/o3 thinking process, search queries, and context metadata are removed
+- Storage reduced by ~40% for o1/o3 conversations
+- New syncs automatically filter out metadata
+
 ### Example Query with Timezone Conversion
 
 ```sql
 SELECT
-    ((meta->>'conversation_create_time')::timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai')::timestamp as real_chat_time,
+    created_at AT TIME ZONE 'Asia/Shanghai' as real_chat_time,
     chat_title,
     COALESCE(
         CASE

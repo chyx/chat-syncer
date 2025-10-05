@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.3.3
+// @version      1.3.4
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -769,6 +769,12 @@ const ChatGPTModule = {
                 const role = msg.author?.role;
                 if (!role || (role !== 'user' && role !== 'assistant')) continue;
                 const ct = msg.content?.content_type;
+
+                // 跳过 o1/o3 元数据消息
+                if (ct === 'model_editable_context' || ct === 'thoughts' || ct === 'reasoning_recap') {
+                    continue;
+                }
+
                 let text = '';
                 if (ct === 'text') {
                     text = (msg.content.parts || []).join('\n\n');
@@ -783,7 +789,12 @@ const ChatGPTModule = {
                 } else if (ct === 'execution_output') {
                     text = '[tool/output]\n' + (msg.metadata?.aggregate_result?.messages?.map(m => m.text || m.message || '').join('\n') || '');
                 } else {
-                    text = JSON.stringify(msg.content);
+                    // 未知类型：检查是否为搜索查询等元数据
+                    const contentStr = JSON.stringify(msg.content);
+                    if (contentStr.includes('search_query') || contentStr.includes('content_type')) {
+                        continue; // 跳过元数据
+                    }
+                    text = contentStr;
                 }
                 items.push({ id: msg.id, ts: msg.create_time || 0, role, text });
             }
@@ -844,7 +855,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.3'
+                        version: '1.3.4'
                     }
                 };
 
