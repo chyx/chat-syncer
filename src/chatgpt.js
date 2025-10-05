@@ -677,7 +677,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.1'
+                        version: '1.3.2'
                     }
                 };
 
@@ -705,7 +705,7 @@ const ChatGPTModule = {
                         'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
                         'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
                         'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
+                        'Prefer': 'resolution=merge-duplicates,return=minimal'
                     },
                     data: JSON.stringify(record),
                     onload: function(response) {
@@ -909,30 +909,15 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.2.3',
+                    version: '1.3.2',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
                 }
             };
 
-            // 检查是否已存在
-            const textForHash = messages.map(m => `${m.role}:${m.text}`).join('\n');
-            const curHash = this.generateHash(textForHash);
-            const hashKey = `chat_syncer.lasthash::${record.chat_id}`;
-            const lastHash = GM_getValue(hashKey, '');
-
-            if (lastHash === curHash) {
-                throw new Error('对话已存在，跳过');
-            }
-
-            // 上传到 Supabase
+            // 上传到 Supabase (数据库会自动处理重复的chat_id)
             await ChatGPTModule.ChatSyncer.uploadToSupabase(record);
-            GM_setValue(hashKey, curHash);
-        },
-
-        generateHash(text) {
-            return ChatGPTModule.DataExtractor.generateHash(text);
         }
     },
 

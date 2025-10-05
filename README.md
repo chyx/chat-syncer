@@ -60,6 +60,8 @@ If auto-detection fails, you can manually configure:
 
 ## Database Schema
 
+### Initial Setup
+
 Run this SQL in your Supabase project:
 
 ```sql
@@ -84,11 +86,35 @@ create index if not exists chat_logs_created_at_idx on public.chat_logs (created
 create index if not exists chat_logs_chat_id_idx on public.chat_logs (chat_id);
 create index if not exists chat_logs_gin_msgs on public.chat_logs using gin (messages);
 
--- Enable RLS and allow anonymous inserts only
+-- Enable RLS and allow anonymous inserts and updates
 alter table public.chat_logs enable row level security;
 create policy "anon can insert" on public.chat_logs
   for insert to anon with check (true);
+create policy "anon can update" on public.chat_logs
+  for update to anon using (true) with check (true);
 ```
+
+### Migration: Add Unique Constraint for UPSERT
+
+**If you already have data**, run this migration to prevent duplicates:
+
+```sql
+-- Step 1: Remove duplicate chat_ids (keep the newest record for each chat_id)
+DELETE FROM public.chat_logs a
+USING public.chat_logs b
+WHERE a.chat_id = b.chat_id
+  AND a.chat_id IS NOT NULL
+  AND a.created_at < b.created_at;
+
+-- Step 2: Add unique constraint on chat_id
+ALTER TABLE public.chat_logs
+ADD CONSTRAINT chat_logs_chat_id_unique UNIQUE (chat_id);
+```
+
+After this migration, the syncer will automatically:
+- **Insert** new conversations
+- **Update** existing conversations (based on chat_id)
+- Prevent duplicate entries
 
 ## Data Format
 
