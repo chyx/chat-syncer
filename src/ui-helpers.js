@@ -100,8 +100,11 @@ const UIHelpers = {
      * @returns {HTMLButtonElement} The update button
      */
     createUpdateScriptButton(container) {
+        // Get current version (injected during build)
+        const version = typeof SCRIPT_VERSION !== 'undefined' ? SCRIPT_VERSION : 'unknown';
+
         const updateButton = this.createButton({
-            text: '🔄 更新脚本',
+            text: `🔄 更新脚本 (v${version})`,
             onClick: () => {
                 window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
             },

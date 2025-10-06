@@ -54,9 +54,12 @@ for (const file of sourceFiles) {
     combinedCode += content + '\n\n';
 }
 
-// Wrap in IIFE
+// Wrap in IIFE with version injection
 const wrappedCode = `(function() {
     'use strict';
+
+    // Injected version number
+    const SCRIPT_VERSION = '${version}';
 
 ${combinedCode}
 })();

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.0
+// @version      1.6.1
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -19,6 +19,9 @@
 
 (function() {
     'use strict';
+
+    // Injected version number
+    const SCRIPT_VERSION = '1.6.1';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -269,8 +272,11 @@ const UIHelpers = {
      * @returns {HTMLButtonElement} The update button
      */
     createUpdateScriptButton(container) {
+        // Get current version (injected during build)
+        const version = typeof SCRIPT_VERSION !== 'undefined' ? SCRIPT_VERSION : 'unknown';
+
         const updateButton = this.createButton({
-            text: '🔄 更新脚本',
+            text: `🔄 更新脚本 (v${version})`,
             onClick: () => {
                 window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
             },
