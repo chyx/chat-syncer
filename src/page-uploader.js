@@ -3,6 +3,24 @@
 // ===============================
 
 const PageUploaderModule = {
+    // Get current domain for per-domain settings
+    getCurrentDomain() {
+        try {
+            const hostname = window.location.hostname;
+            // Remove www. prefix for consistency
+            return hostname.replace(/^www\./, '');
+        } catch (error) {
+            console.error('Error getting domain:', error);
+            return 'unknown';
+        }
+    },
+
+    // Get storage key for current domain
+    getStorageKey() {
+        const domain = this.getCurrentDomain();
+        return `page_uploader_button_visible_${domain}`;
+    },
+
     // Convert HTML to Markdown text
     htmlToMarkdown(html) {
         // Create a temporary DOM element
@@ -323,36 +341,31 @@ const PageUploaderModule = {
         return button;
     },
 
-    // Toggle upload button visibility
+    // Toggle upload button visibility (per-domain)
     toggleUploadButton() {
-        const currentState = GM_getValue('page_uploader_button_visible', false);
+        const storageKey = this.getStorageKey();
+        const currentState = GM_getValue(storageKey, false);
         const newState = !currentState;
-        GM_setValue('page_uploader_button_visible', newState);
+        GM_setValue(storageKey, newState);
 
         const button = document.getElementById('page-upload-button');
+        const domain = this.getCurrentDomain();
+
         if (newState) {
             // Show button
             if (!button) {
                 this.createUploadButton();
             }
-            this.showUploadStatus('✅ Upload button enabled', 'success');
+            this.showUploadStatus(`✅ Upload button enabled for ${domain}`, 'success');
         } else {
             // Hide button
             if (button) {
                 button.remove();
             }
-            this.showUploadStatus('Upload button disabled', 'info');
+            this.showUploadStatus(`Upload button disabled for ${domain}`, 'info');
         }
 
-        // Update menu command text
-        this.updateMenuCommand();
-    },
-
-    // Update menu command text based on current state
-    updateMenuCommand() {
-        // Menu commands can't be updated dynamically, so we just log the state
-        const isVisible = GM_getValue('page_uploader_button_visible', false);
-        console.log('Upload button state:', isVisible ? 'ON' : 'OFF');
+        console.log(`Upload button for ${domain}:`, newState ? 'ON' : 'OFF');
     },
 
     // Initialize the page uploader
@@ -364,8 +377,11 @@ const PageUploaderModule = {
             });
         }
 
-        // Check if button should be visible on page load
-        const isVisible = GM_getValue('page_uploader_button_visible', false);
+        // Check if button should be visible on page load (per-domain)
+        const storageKey = this.getStorageKey();
+        const isVisible = GM_getValue(storageKey, false);
+        const domain = this.getCurrentDomain();
+
         if (isVisible) {
             // Wait for DOM to be ready
             if (document.readyState === 'loading') {
@@ -377,6 +393,6 @@ const PageUploaderModule = {
             }
         }
 
-        console.log('Page Uploader Module initialized (button:', isVisible ? 'ON' : 'OFF', ')');
+        console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);
     }
 };
