@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.1
+// @version      1.6.2
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -21,7 +21,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.6.1';
+    const SCRIPT_VERSION = '1.6.2';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -379,142 +379,67 @@ const ChatGPTModule = {
         },
 
         createBatchSyncButton() {
-            const container = document.createElement('div');
+            // Create container for buttons
+            const container = UIHelpers.createButtonContainer({ bottom: '80px', right: '20px' });
             container.id = 'batch-sync-container';
-            container.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                right: 20px;
-                z-index: 10000;
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-            `;
 
             // 快速同步按钮（默认20条）
-            const quickButton = document.createElement('button');
-            quickButton.innerHTML = '📚 批量同步最近20条';
-            quickButton.style.cssText = `
-                background: #7c3aed;
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(124,58,237,0.3);
-                transition: all 0.2s ease;
-                min-width: 180px;
-                text-align: center;
-            `;
+            const quickButton = UIHelpers.createButton({
+                text: '📚 批量同步最近20条',
+                onClick: () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20),
+                position: {},
+                color: 'purple'
+            });
+            quickButton.style.position = 'relative';
+            quickButton.style.minWidth = '180px';
+            quickButton.style.textAlign = 'center';
+            quickButton.style.fontWeight = '600';
 
-            quickButton.onmouseover = () => {
-                quickButton.style.background = '#6d28d9';
-                quickButton.style.transform = 'translateY(-2px)';
-                quickButton.style.boxShadow = '0 6px 16px rgba(124,58,237,0.4)';
-            };
+            // 自定义同步按钮（hover显示）
+            const customButton = UIHelpers.createButton({
+                text: '⚙️ 自定义同步',
+                onClick: () => this.showCustomSyncModal(),
+                position: {},
+                color: 'green'
+            });
+            customButton.style.position = 'relative';
+            customButton.style.minWidth = '180px';
+            customButton.style.textAlign = 'center';
+            customButton.style.fontWeight = '600';
+            customButton.style.opacity = '0';
+            customButton.style.visibility = 'hidden';
+            customButton.style.maxHeight = '0';
+            customButton.style.overflow = 'hidden';
 
-            quickButton.onmouseout = () => {
-                quickButton.style.background = '#7c3aed';
-                quickButton.style.transform = 'translateY(0)';
-                quickButton.style.boxShadow = '0 4px 12px rgba(124,58,237,0.3)';
-            };
-
-            quickButton.onclick = () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20);
-
-            // 自定义同步按钮（默认隐藏）
-            const customButton = document.createElement('button');
-            customButton.innerHTML = '⚙️ 自定义同步';
-            customButton.style.cssText = `
-                background: #059669;
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(5,150,105,0.3);
-                transition: all 0.2s ease;
-                min-width: 180px;
-                text-align: center;
-                opacity: 0;
-                visibility: hidden;
-                max-height: 0;
-                overflow: hidden;
-            `;
-
-            customButton.onmouseover = () => {
-                customButton.style.background = '#047857';
-                customButton.style.transform = 'translateY(-2px)';
-                customButton.style.boxShadow = '0 6px 16px rgba(5,150,105,0.4)';
-            };
-
-            customButton.onmouseout = () => {
-                customButton.style.background = '#059669';
-                customButton.style.transform = 'translateY(0)';
-                customButton.style.boxShadow = '0 4px 12px rgba(5,150,105,0.3)';
-            };
-
-            customButton.onclick = () => this.showCustomSyncModal();
-
-            // 更新脚本按钮（默认隐藏）
-            const updateButton = document.createElement('button');
-            updateButton.innerHTML = '🔄 更新脚本';
-            updateButton.style.cssText = `
-                background: #0ea5e9;
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 600;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(14,165,233,0.3);
-                transition: all 0.2s ease;
-                min-width: 180px;
-                text-align: center;
-                opacity: 0;
-                visibility: hidden;
-                max-height: 0;
-                overflow: hidden;
-            `;
-
-            updateButton.onmouseover = () => {
-                updateButton.style.background = '#0284c7';
-                updateButton.style.transform = 'translateY(-2px)';
-                updateButton.style.boxShadow = '0 6px 16px rgba(14,165,233,0.4)';
-            };
-
-            updateButton.onmouseout = () => {
-                updateButton.style.background = '#0ea5e9';
-                updateButton.style.transform = 'translateY(0)';
-                updateButton.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
-            };
-
-            updateButton.onclick = () => {
-                window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
-            };
+            // 更新脚本按钮（hover显示）
+            const updateButton = UIHelpers.createUpdateScriptButton(container);
+            updateButton.style.position = 'relative';
+            updateButton.style.minWidth = '180px';
+            updateButton.style.textAlign = 'center';
+            updateButton.style.fontWeight = '600';
 
             // Hover 显示/隐藏额外按钮
-            container.onmouseenter = () => {
-                customButton.style.opacity = '1';
-                customButton.style.visibility = 'visible';
-                customButton.style.maxHeight = '100px';
-                updateButton.style.opacity = '1';
-                updateButton.style.visibility = 'visible';
-                updateButton.style.maxHeight = '100px';
-            };
+            let hoverTimer;
+            container.addEventListener('mouseenter', () => {
+                hoverTimer = setTimeout(() => {
+                    customButton.style.opacity = '1';
+                    customButton.style.visibility = 'visible';
+                    customButton.style.maxHeight = '100px';
+                    updateButton.style.opacity = '1';
+                    updateButton.style.visibility = 'visible';
+                    updateButton.style.maxHeight = '100px';
+                }, 300);
+            });
 
-            container.onmouseleave = () => {
+            container.addEventListener('mouseleave', () => {
+                clearTimeout(hoverTimer);
                 customButton.style.opacity = '0';
                 customButton.style.visibility = 'hidden';
                 customButton.style.maxHeight = '0';
                 updateButton.style.opacity = '0';
                 updateButton.style.visibility = 'hidden';
                 updateButton.style.maxHeight = '0';
-            };
+            });
 
             container.appendChild(quickButton);
             container.appendChild(customButton);
