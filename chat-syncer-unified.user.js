@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.5.3
+// @version      1.6.0
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -163,6 +163,170 @@ const PageDetector = {
         if (this.isChatGPTConversationPage()) return 'chatgpt_conversation';
         if (this.isSupabasePage()) return 'supabase';
         return 'unknown';
+    }
+};
+
+
+// ===============================
+// UI HELPERS - Shared Button Utilities
+// ===============================
+
+const UIHelpers = {
+    // Common button styles
+    buttonStyles: {
+        base: `
+            position: fixed;
+            z-index: 10000;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        `,
+        green: {
+            background: '#10a37f',
+            hoverBackground: '#0d8f6b',
+            boxShadow: '0 4px 12px rgba(16,163,127,0.3)',
+            hoverBoxShadow: '0 6px 16px rgba(16,163,127,0.4)'
+        },
+        blue: {
+            background: '#0ea5e9',
+            hoverBackground: '#0284c7',
+            boxShadow: '0 4px 12px rgba(14,165,233,0.3)',
+            hoverBoxShadow: '0 6px 16px rgba(14,165,233,0.4)'
+        },
+        purple: {
+            background: '#8b5cf6',
+            hoverBackground: '#7c3aed',
+            boxShadow: '0 4px 12px rgba(139,92,246,0.3)',
+            hoverBoxShadow: '0 6px 16px rgba(139,92,246,0.4)'
+        }
+    },
+
+    /**
+     * Create a styled button with consistent behavior
+     * @param {Object} options - Button configuration
+     * @param {string} options.text - Button text/HTML
+     * @param {function} options.onClick - Click handler
+     * @param {string} options.position - Position object {bottom, right, top, left}
+     * @param {string} options.color - Color theme: 'green', 'blue', 'purple'
+     * @param {string} options.id - Optional button ID
+     * @param {number} options.zIndex - Optional z-index override
+     * @returns {HTMLButtonElement} The created button
+     */
+    createButton({
+        text,
+        onClick,
+        position = { bottom: '20px', right: '20px' },
+        color = 'green',
+        id = null,
+        zIndex = 10000
+    }) {
+        const button = document.createElement('button');
+        if (id) button.id = id;
+
+        const theme = this.buttonStyles[color] || this.buttonStyles.green;
+
+        // Build position CSS
+        const positionCss = Object.entries(position)
+            .map(([key, value]) => `${key}: ${value};`)
+            .join('\n');
+
+        button.style.cssText = `
+            ${this.buttonStyles.base}
+            ${positionCss}
+            z-index: ${zIndex};
+            background: ${theme.background};
+            box-shadow: ${theme.boxShadow};
+        `;
+
+        button.innerHTML = text;
+
+        // Hover effects
+        button.onmouseover = () => {
+            button.style.background = theme.hoverBackground;
+            button.style.transform = 'translateY(-2px)';
+            button.style.boxShadow = theme.hoverBoxShadow;
+        };
+
+        button.onmouseout = () => {
+            button.style.background = theme.background;
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = theme.boxShadow;
+        };
+
+        button.onclick = onClick;
+
+        return button;
+    },
+
+    /**
+     * Create update script button (visible on hover)
+     * @param {HTMLElement} container - Parent container to attach hover listener
+     * @returns {HTMLButtonElement} The update button
+     */
+    createUpdateScriptButton(container) {
+        const updateButton = this.createButton({
+            text: '🔄 更新脚本',
+            onClick: () => {
+                window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
+            },
+            position: { bottom: '20px', right: '20px' },
+            color: 'blue',
+            id: 'update-script-button'
+        });
+
+        // Initially hidden
+        updateButton.style.opacity = '0';
+        updateButton.style.visibility = 'hidden';
+        updateButton.style.maxHeight = '0';
+        updateButton.style.overflow = 'hidden';
+        updateButton.style.marginTop = '0';
+
+        // Show on container hover
+        if (container) {
+            let hoverTimer;
+
+            container.addEventListener('mouseenter', () => {
+                hoverTimer = setTimeout(() => {
+                    updateButton.style.opacity = '1';
+                    updateButton.style.visibility = 'visible';
+                    updateButton.style.maxHeight = '100px';
+                    updateButton.style.marginTop = '12px';
+                }, 300); // 300ms delay
+            });
+
+            container.addEventListener('mouseleave', () => {
+                clearTimeout(hoverTimer);
+                updateButton.style.opacity = '0';
+                updateButton.style.visibility = 'hidden';
+                updateButton.style.maxHeight = '0';
+                updateButton.style.marginTop = '0';
+            });
+        }
+
+        return updateButton;
+    },
+
+    /**
+     * Create a button container that can hold multiple buttons
+     * @param {Object} position - Position object {bottom, right, top, left}
+     * @returns {HTMLDivElement} The container element
+     */
+    createButtonContainer(position = { bottom: '20px', right: '20px' }) {
+        const container = document.createElement('div');
+        container.style.cssText = `
+            position: fixed;
+            ${Object.entries(position).map(([key, value]) => `${key}: ${value};`).join('\n')}
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        `;
+        return container;
     }
 };
 
@@ -1249,38 +1413,33 @@ const SupabaseModule = {
     // UI for the config helper
     ConfigUI: {
         createConfigButton() {
-            const button = document.createElement('button');
-            button.innerHTML = '🚀 配置 ChatGPT Syncer';
-            button.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 10000;
-                background: #10a37f;
-                color: white;
-                border: none;
-                padding: 12px 16px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                transition: all 0.2s ease;
-                max-width: 200px;
-            `;
+            // Create container for buttons
+            const container = UIHelpers.createButtonContainer({ top: '20px', right: '20px' });
+            container.id = 'supabase-config-button-container';
 
-            button.onmouseover = () => {
-                button.style.background = '#0d8f6b';
-                button.style.transform = 'translateY(-2px)';
-            };
+            // Create config button
+            const configButton = UIHelpers.createButton({
+                text: '🚀 配置 ChatGPT Syncer',
+                onClick: () => this.showConfigModal(),
+                position: {},
+                color: 'green'
+            });
 
-            button.onmouseout = () => {
-                button.style.background = '#10a37f';
-                button.style.transform = 'translateY(0)';
-            };
+            configButton.style.position = 'relative';
+            configButton.style.top = 'auto';
+            configButton.style.right = 'auto';
+            configButton.style.maxWidth = '200px';
 
-            button.onclick = () => this.showConfigModal();
-            return button;
+            // Create update script button
+            const updateButton = UIHelpers.createUpdateScriptButton(container);
+            updateButton.style.position = 'relative';
+            updateButton.style.top = 'auto';
+            updateButton.style.right = 'auto';
+
+            container.appendChild(configButton);
+            container.appendChild(updateButton);
+
+            return container;
         },
 
         showConfigModal() {
@@ -1527,6 +1686,9 @@ const PageUploaderModule = {
     // Get current domain for per-domain settings
     getCurrentDomain() {
         try {
+            if (typeof window === 'undefined' || !window.location || !window.location.hostname) {
+                return 'unknown';
+            }
             const hostname = window.location.hostname;
             // Remove www. prefix for consistency
             return hostname.replace(/^www\./, '');
@@ -1822,44 +1984,36 @@ const PageUploaderModule = {
 
     // Create upload button in bottom-right corner
     createUploadButton() {
-        const button = document.createElement('button');
-        button.id = 'page-upload-button';
-        button.innerHTML = '📤 Upload Page';
-        button.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 99999;
-            background: #10a37f;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transition: all 0.2s ease;
-        `;
+        // Create container for buttons
+        const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
+        container.id = 'page-upload-button-container';
 
-        button.onmouseover = () => {
-            button.style.background = '#0d8f6b';
-            button.style.transform = 'translateY(-2px)';
-            button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
-        };
+        // Create upload button
+        const uploadButton = UIHelpers.createButton({
+            text: '📤 Upload Page',
+            onClick: () => this.uploadPage(),
+            position: {}, // Position handled by container
+            color: 'green',
+            id: 'page-upload-button',
+            zIndex: 99999
+        });
 
-        button.onmouseout = () => {
-            button.style.background = '#10a37f';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-        };
+        // Remove fixed positioning from button since container handles it
+        uploadButton.style.position = 'relative';
+        uploadButton.style.bottom = 'auto';
+        uploadButton.style.right = 'auto';
 
-        button.onclick = () => {
-            this.uploadPage();
-        };
+        // Create update script button
+        const updateButton = UIHelpers.createUpdateScriptButton(container);
+        updateButton.style.position = 'relative';
+        updateButton.style.bottom = 'auto';
+        updateButton.style.right = 'auto';
 
-        document.body.appendChild(button);
-        return button;
+        container.appendChild(uploadButton);
+        container.appendChild(updateButton);
+        document.body.appendChild(container);
+
+        return container;
     },
 
     // Toggle upload button visibility (per-domain)
@@ -1869,19 +2023,19 @@ const PageUploaderModule = {
         const newState = !currentState;
         GM_setValue(storageKey, newState);
 
-        const button = document.getElementById('page-upload-button');
+        const container = document.getElementById('page-upload-button-container');
         const domain = this.getCurrentDomain();
 
         if (newState) {
             // Show button
-            if (!button) {
+            if (!container) {
                 this.createUploadButton();
             }
             this.showUploadStatus(`✅ Upload button enabled for ${domain}`, 'success');
         } else {
             // Hide button
-            if (button) {
-                button.remove();
+            if (container) {
+                container.remove();
             }
             this.showUploadStatus(`Upload button disabled for ${domain}`, 'info');
         }

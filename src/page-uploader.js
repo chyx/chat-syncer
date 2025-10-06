@@ -6,6 +6,9 @@ const PageUploaderModule = {
     // Get current domain for per-domain settings
     getCurrentDomain() {
         try {
+            if (typeof window === 'undefined' || !window.location || !window.location.hostname) {
+                return 'unknown';
+            }
             const hostname = window.location.hostname;
             // Remove www. prefix for consistency
             return hostname.replace(/^www\./, '');
@@ -301,44 +304,36 @@ const PageUploaderModule = {
 
     // Create upload button in bottom-right corner
     createUploadButton() {
-        const button = document.createElement('button');
-        button.id = 'page-upload-button';
-        button.innerHTML = '📤 Upload Page';
-        button.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 99999;
-            background: #10a37f;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            transition: all 0.2s ease;
-        `;
+        // Create container for buttons
+        const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
+        container.id = 'page-upload-button-container';
 
-        button.onmouseover = () => {
-            button.style.background = '#0d8f6b';
-            button.style.transform = 'translateY(-2px)';
-            button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
-        };
+        // Create upload button
+        const uploadButton = UIHelpers.createButton({
+            text: '📤 Upload Page',
+            onClick: () => this.uploadPage(),
+            position: {}, // Position handled by container
+            color: 'green',
+            id: 'page-upload-button',
+            zIndex: 99999
+        });
 
-        button.onmouseout = () => {
-            button.style.background = '#10a37f';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
-        };
+        // Remove fixed positioning from button since container handles it
+        uploadButton.style.position = 'relative';
+        uploadButton.style.bottom = 'auto';
+        uploadButton.style.right = 'auto';
 
-        button.onclick = () => {
-            this.uploadPage();
-        };
+        // Create update script button
+        const updateButton = UIHelpers.createUpdateScriptButton(container);
+        updateButton.style.position = 'relative';
+        updateButton.style.bottom = 'auto';
+        updateButton.style.right = 'auto';
 
-        document.body.appendChild(button);
-        return button;
+        container.appendChild(uploadButton);
+        container.appendChild(updateButton);
+        document.body.appendChild(container);
+
+        return container;
     },
 
     // Toggle upload button visibility (per-domain)
@@ -348,19 +343,19 @@ const PageUploaderModule = {
         const newState = !currentState;
         GM_setValue(storageKey, newState);
 
-        const button = document.getElementById('page-upload-button');
+        const container = document.getElementById('page-upload-button-container');
         const domain = this.getCurrentDomain();
 
         if (newState) {
             // Show button
-            if (!button) {
+            if (!container) {
                 this.createUploadButton();
             }
             this.showUploadStatus(`✅ Upload button enabled for ${domain}`, 'success');
         } else {
             // Hide button
-            if (button) {
-                button.remove();
+            if (container) {
+                container.remove();
             }
             this.showUploadStatus(`Upload button disabled for ${domain}`, 'info');
         }

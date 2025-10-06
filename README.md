@@ -69,6 +69,38 @@ The unified script includes both ChatGPT syncing and Supabase config helper func
 - Page content is converted to Markdown and uploaded to Supabase
 - Same URL = update existing record (UPSERT)
 
+### Retrieve Uploaded Pages
+To get the latest uploaded pages from Supabase:
+
+```sql
+-- Get the most recent 10 uploads
+SELECT page_url, page_title, updated_at, page_content
+FROM page_uploads
+ORDER BY updated_at DESC
+LIMIT 10;
+
+-- Get a specific page by URL
+SELECT * FROM page_uploads
+WHERE page_url = 'https://example.com/page';
+
+-- Search pages by title or content
+SELECT page_url, page_title, updated_at
+FROM page_uploads
+WHERE page_title ILIKE '%search term%'
+   OR page_content ILIKE '%search term%'
+ORDER BY updated_at DESC;
+```
+
+Or use Supabase client library:
+```javascript
+// Get latest uploads
+const { data, error } = await supabase
+  .from('page_uploads')
+  .select('page_url, page_title, updated_at, page_content')
+  .order('updated_at', { ascending: false })
+  .limit(10);
+```
+
 ### Manual Configuration
 If auto-detection fails, you can manually configure:
 - Click sync button on any ChatGPT page

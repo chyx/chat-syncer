@@ -36,6 +36,7 @@ const header = `// ==UserScript==
 // Source files in order
 const sourceFiles = [
     'src/config.js',
+    'src/ui-helpers.js',
     'src/chatgpt.js',
     'src/supabase.js',
     'src/page-uploader.js',

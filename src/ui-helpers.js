@@ -1,0 +1,162 @@
+// ===============================
+// UI HELPERS - Shared Button Utilities
+// ===============================
+
+const UIHelpers = {
+    // Common button styles
+    buttonStyles: {
+        base: `
+            position: fixed;
+            z-index: 10000;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        `,
+        green: {
+            background: '#10a37f',
+            hoverBackground: '#0d8f6b',
+            boxShadow: '0 4px 12px rgba(16,163,127,0.3)',
+            hoverBoxShadow: '0 6px 16px rgba(16,163,127,0.4)'
+        },
+        blue: {
+            background: '#0ea5e9',
+            hoverBackground: '#0284c7',
+            boxShadow: '0 4px 12px rgba(14,165,233,0.3)',
+            hoverBoxShadow: '0 6px 16px rgba(14,165,233,0.4)'
+        },
+        purple: {
+            background: '#8b5cf6',
+            hoverBackground: '#7c3aed',
+            boxShadow: '0 4px 12px rgba(139,92,246,0.3)',
+            hoverBoxShadow: '0 6px 16px rgba(139,92,246,0.4)'
+        }
+    },
+
+    /**
+     * Create a styled button with consistent behavior
+     * @param {Object} options - Button configuration
+     * @param {string} options.text - Button text/HTML
+     * @param {function} options.onClick - Click handler
+     * @param {string} options.position - Position object {bottom, right, top, left}
+     * @param {string} options.color - Color theme: 'green', 'blue', 'purple'
+     * @param {string} options.id - Optional button ID
+     * @param {number} options.zIndex - Optional z-index override
+     * @returns {HTMLButtonElement} The created button
+     */
+    createButton({
+        text,
+        onClick,
+        position = { bottom: '20px', right: '20px' },
+        color = 'green',
+        id = null,
+        zIndex = 10000
+    }) {
+        const button = document.createElement('button');
+        if (id) button.id = id;
+
+        const theme = this.buttonStyles[color] || this.buttonStyles.green;
+
+        // Build position CSS
+        const positionCss = Object.entries(position)
+            .map(([key, value]) => `${key}: ${value};`)
+            .join('\n');
+
+        button.style.cssText = `
+            ${this.buttonStyles.base}
+            ${positionCss}
+            z-index: ${zIndex};
+            background: ${theme.background};
+            box-shadow: ${theme.boxShadow};
+        `;
+
+        button.innerHTML = text;
+
+        // Hover effects
+        button.onmouseover = () => {
+            button.style.background = theme.hoverBackground;
+            button.style.transform = 'translateY(-2px)';
+            button.style.boxShadow = theme.hoverBoxShadow;
+        };
+
+        button.onmouseout = () => {
+            button.style.background = theme.background;
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = theme.boxShadow;
+        };
+
+        button.onclick = onClick;
+
+        return button;
+    },
+
+    /**
+     * Create update script button (visible on hover)
+     * @param {HTMLElement} container - Parent container to attach hover listener
+     * @returns {HTMLButtonElement} The update button
+     */
+    createUpdateScriptButton(container) {
+        const updateButton = this.createButton({
+            text: '🔄 更新脚本',
+            onClick: () => {
+                window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
+            },
+            position: { bottom: '20px', right: '20px' },
+            color: 'blue',
+            id: 'update-script-button'
+        });
+
+        // Initially hidden
+        updateButton.style.opacity = '0';
+        updateButton.style.visibility = 'hidden';
+        updateButton.style.maxHeight = '0';
+        updateButton.style.overflow = 'hidden';
+        updateButton.style.marginTop = '0';
+
+        // Show on container hover
+        if (container) {
+            let hoverTimer;
+
+            container.addEventListener('mouseenter', () => {
+                hoverTimer = setTimeout(() => {
+                    updateButton.style.opacity = '1';
+                    updateButton.style.visibility = 'visible';
+                    updateButton.style.maxHeight = '100px';
+                    updateButton.style.marginTop = '12px';
+                }, 300); // 300ms delay
+            });
+
+            container.addEventListener('mouseleave', () => {
+                clearTimeout(hoverTimer);
+                updateButton.style.opacity = '0';
+                updateButton.style.visibility = 'hidden';
+                updateButton.style.maxHeight = '0';
+                updateButton.style.marginTop = '0';
+            });
+        }
+
+        return updateButton;
+    },
+
+    /**
+     * Create a button container that can hold multiple buttons
+     * @param {Object} position - Position object {bottom, right, top, left}
+     * @returns {HTMLDivElement} The container element
+     */
+    createButtonContainer(position = { bottom: '20px', right: '20px' }) {
+        const container = document.createElement('div');
+        container.style.cssText = `
+            position: fixed;
+            ${Object.entries(position).map(([key, value]) => `${key}: ${value};`).join('\n')}
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        `;
+        return container;
+    }
+};

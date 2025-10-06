@@ -40,38 +40,33 @@ const SupabaseModule = {
     // UI for the config helper
     ConfigUI: {
         createConfigButton() {
-            const button = document.createElement('button');
-            button.innerHTML = '🚀 配置 ChatGPT Syncer';
-            button.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 10000;
-                background: #10a37f;
-                color: white;
-                border: none;
-                padding: 12px 16px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                transition: all 0.2s ease;
-                max-width: 200px;
-            `;
+            // Create container for buttons
+            const container = UIHelpers.createButtonContainer({ top: '20px', right: '20px' });
+            container.id = 'supabase-config-button-container';
 
-            button.onmouseover = () => {
-                button.style.background = '#0d8f6b';
-                button.style.transform = 'translateY(-2px)';
-            };
+            // Create config button
+            const configButton = UIHelpers.createButton({
+                text: '🚀 配置 ChatGPT Syncer',
+                onClick: () => this.showConfigModal(),
+                position: {},
+                color: 'green'
+            });
 
-            button.onmouseout = () => {
-                button.style.background = '#10a37f';
-                button.style.transform = 'translateY(0)';
-            };
+            configButton.style.position = 'relative';
+            configButton.style.top = 'auto';
+            configButton.style.right = 'auto';
+            configButton.style.maxWidth = '200px';
 
-            button.onclick = () => this.showConfigModal();
-            return button;
+            // Create update script button
+            const updateButton = UIHelpers.createUpdateScriptButton(container);
+            updateButton.style.position = 'relative';
+            updateButton.style.top = 'auto';
+            updateButton.style.right = 'auto';
+
+            container.appendChild(configButton);
+            container.appendChild(updateButton);
+
+            return container;
         },
 
         showConfigModal() {
