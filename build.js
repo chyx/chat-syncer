@@ -25,9 +25,11 @@ const header = `// ==UserScript==
 // @match        https://chat.openai.com/*
 // @match        https://supabase.com/dashboard/project/*
 // @match        https://app.supabase.com/project/*
+// @match        *://*/*
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_xmlhttpRequest
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 `;
 
@@ -36,6 +38,7 @@ const sourceFiles = [
     'src/config.js',
     'src/chatgpt.js',
     'src/supabase.js',
+    'src/page-uploader.js',
     'src/main.js'
 ];
 

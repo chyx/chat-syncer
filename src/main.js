@@ -13,12 +13,15 @@ function initialize() {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
             ChatGPTModule.init();
+            PageUploaderModule.init();
             break;
         case 'supabase':
             SupabaseModule.init();
             break;
         default:
-            console.log('未识别的页面类型，脚本不会激活');
+            // For all other pages, only initialize PageUploaderModule
+            PageUploaderModule.init();
+            console.log('通用页面，已启用 Page Uploader 功能');
     }
 }
 
@@ -35,6 +38,7 @@ if (typeof global !== 'undefined' && global.process && global.process.env) {
     global.PageDetector = PageDetector;
     global.ChatGPTModule = ChatGPTModule;
     global.SupabaseModule = SupabaseModule;
+    global.PageUploaderModule = PageUploaderModule;
 
     // Legacy compatibility for old tests
     global.UI = ChatGPTModule.UI;
