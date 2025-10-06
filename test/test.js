@@ -242,7 +242,7 @@ function createMockBrowser() {
 
 // 加载用户脚本
 function loadUserScript() {
-    const scriptPath = path.join(__dirname, '..', 'chat-syncer-unified.js');
+    const scriptPath = path.join(__dirname, '..', 'chat-syncer-unified.user.js');
     let scriptContent = fs.readFileSync(scriptPath, 'utf8');
     
     // 移除 Tampermonkey 头部

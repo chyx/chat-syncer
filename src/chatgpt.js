@@ -120,21 +120,66 @@ const ChatGPTModule = {
 
             customButton.onclick = () => this.showCustomSyncModal();
 
-            // Hover 显示/隐藏自定义按钮
+            // 更新脚本按钮（默认隐藏）
+            const updateButton = document.createElement('button');
+            updateButton.innerHTML = '🔄 更新脚本';
+            updateButton.style.cssText = `
+                background: #0ea5e9;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(14,165,233,0.3);
+                transition: all 0.2s ease;
+                min-width: 180px;
+                text-align: center;
+                opacity: 0;
+                visibility: hidden;
+                max-height: 0;
+                overflow: hidden;
+            `;
+
+            updateButton.onmouseover = () => {
+                updateButton.style.background = '#0284c7';
+                updateButton.style.transform = 'translateY(-2px)';
+                updateButton.style.boxShadow = '0 6px 16px rgba(14,165,233,0.4)';
+            };
+
+            updateButton.onmouseout = () => {
+                updateButton.style.background = '#0ea5e9';
+                updateButton.style.transform = 'translateY(0)';
+                updateButton.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
+            };
+
+            updateButton.onclick = () => {
+                window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
+            };
+
+            // Hover 显示/隐藏额外按钮
             container.onmouseenter = () => {
                 customButton.style.opacity = '1';
                 customButton.style.visibility = 'visible';
                 customButton.style.maxHeight = '100px';
+                updateButton.style.opacity = '1';
+                updateButton.style.visibility = 'visible';
+                updateButton.style.maxHeight = '100px';
             };
 
             container.onmouseleave = () => {
                 customButton.style.opacity = '0';
                 customButton.style.visibility = 'hidden';
                 customButton.style.maxHeight = '0';
+                updateButton.style.opacity = '0';
+                updateButton.style.visibility = 'hidden';
+                updateButton.style.maxHeight = '0';
             };
 
             container.appendChild(quickButton);
             container.appendChild(customButton);
+            container.appendChild(updateButton);
             return container;
         },
 
@@ -688,7 +733,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.3.7'
+                        version: '1.4.0'
                     }
                 };
 

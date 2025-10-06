@@ -28,7 +28,7 @@ This userscript allows you to capture and sync ChatGPT conversations directly fr
 
 ### Direct Install (Recommended)
 Install directly from the raw GitHub URL in your userscript manager:
-- **Direct install**: `https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.js`
+- **Direct install**: `https://raw.githubusercontent.com/chyx/chat-syncer/main/chat-syncer-unified.user.js`
 - **Auto-updates**: Enabled via @updateURL and @downloadURL directives
 
 The unified script includes both ChatGPT syncing and Supabase config helper functionality.
@@ -187,16 +187,16 @@ src/
 ├── supabase.js     - Supabase module (config helper, auto-detection)
 └── main.js         - Initialization logic
 
-build.js            - Build script to generate chat-syncer-unified.js
+build.js            - Build script to generate chat-syncer-unified.user.js
 ```
 
 ### Building
 ```bash
-npm run build       # Generate chat-syncer-unified.js from source files
+npm run build       # Generate chat-syncer-unified.user.js from source files
 npm test           # Run test suite
 ```
 
-The `chat-syncer-unified.js` file is generated from source files in `src/`. Always edit source files, not the generated file.
+The `chat-syncer-unified.user.js` file is generated from source files in `src/`. Always edit source files, not the generated file.
 
 ### Version Management
 Version is managed in `package.json` and automatically injected into the userscript header during build.

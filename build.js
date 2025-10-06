@@ -17,8 +17,8 @@ const header = `// ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
 // @version      ${version}
-// @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
-// @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.js
+// @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
+// @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
 // @author       You
 // @match        https://chatgpt.com/*
@@ -62,7 +62,7 @@ ${combinedCode}
 const finalCode = header + '\n' + wrappedCode;
 
 // Write output
-const outputPath = 'chat-syncer-unified.js';
+const outputPath = 'chat-syncer-unified.user.js';
 fs.writeFileSync(outputPath, finalCode);
 
 console.log(`✅ Build complete: ${outputPath}`);
