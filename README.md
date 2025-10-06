@@ -8,6 +8,7 @@ This userscript allows you to capture and sync ChatGPT conversations directly fr
 
 ## Features
 
+### ChatGPT Sync
 - 🚀 One-click sync to Supabase
 - 📚 Batch sync up to 20 recent conversations from homepage
 - 🔄 API-first approach with DOM fallback
@@ -15,14 +16,23 @@ This userscript allows you to capture and sync ChatGPT conversations directly fr
 - 🔒 Duplicate detection and prevention
 - 📱 Support for regular and shared ChatGPT links
 - 🎯 Clean data extraction (removes UI clutter)
+
+### Page Upload (New in v1.5.0)
+- 📄 Upload any web page to Supabase as Markdown
+- 🔄 HTML to Markdown conversion with structure preservation
+- 🌐 Works on all websites via Tampermonkey menu
+- 🔁 Auto UPSERT based on page URL
+
+### General
 - 🌙 Dark mode support
+- 🔧 Easy configuration via Supabase dashboard
 
 ## Quick Start
 
-1. **Set up Supabase database** (see SQL schema below)
+1. **Set up Supabase database** - See [SETUP.md](SETUP.md) for detailed instructions
 2. **Install the userscript** in Tampermonkey/Violentmonkey
 3. **Configure** your Supabase credentials on first use
-4. **Sync** conversations with the button or keyboard shortcut
+4. **Start syncing** conversations or uploading pages
 
 ## Installation
 
@@ -53,141 +63,56 @@ The unified script includes both ChatGPT syncing and Supabase config helper func
 - Monitor progress in the popup modal
 - Duplicate conversations are automatically skipped
 
+### Upload Any Web Page
+- Navigate to any web page
+- Click Tampermonkey icon → "Upload Page"
+- Page content is converted to Markdown and uploaded to Supabase
+- Same URL = update existing record (UPSERT)
+
 ### Manual Configuration
 If auto-detection fails, you can manually configure:
 - Click sync button on any ChatGPT page
 - Fill in Supabase URL, API key, and table name in the modal
 
-## Database Schema
+## Database Setup
 
-### Initial Setup
+**📖 See [SETUP.md](SETUP.md) for complete database setup instructions**
 
-Run this SQL in your Supabase project:
-
-```sql
--- Enable UUID generation
-create extension if not exists "pgcrypto";
-
-create table if not exists public.chat_logs (
-  id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now(),
-  collected_at timestamptz,
-  started_at timestamptz,
-  chat_id text,
-  chat_url text not null,
-  chat_title text,
-  page_title text,
-  messages jsonb not null,
-  meta jsonb
-);
-
--- Indexes for better performance
-create index if not exists chat_logs_created_at_idx on public.chat_logs (created_at desc);
-create index if not exists chat_logs_chat_id_idx on public.chat_logs (chat_id);
-create index if not exists chat_logs_gin_msgs on public.chat_logs using gin (messages);
-
--- Enable RLS and allow anonymous inserts and updates
-alter table public.chat_logs enable row level security;
-create policy "anon can insert" on public.chat_logs
-  for insert to anon with check (true);
-create policy "anon can update" on public.chat_logs
-  for update to anon using (true) with check (true);
-```
-
-### Migration: Add Unique Constraint for UPSERT
-
-**If you already have data**, run this migration to enable UPSERT and prevent duplicates:
-
-```sql
--- Step 1: Remove duplicate chat_ids (keep the newest record for each chat_id)
-DELETE FROM public.chat_logs a
-USING public.chat_logs b
-WHERE a.chat_id = b.chat_id
-  AND a.chat_id IS NOT NULL
-  AND a.created_at < b.created_at;
-
--- Step 2: Add unique constraint on chat_id
-ALTER TABLE public.chat_logs
-ADD CONSTRAINT chat_logs_chat_id_unique UNIQUE (chat_id);
-```
-
-After this migration, the syncer will automatically:
-- **Insert** new conversations
-- **Update** existing conversations (based on chat_id)
-- Prevent duplicate entries
-
-### Example Query with Timezone Conversion
-
-```sql
-SELECT
-    created_at AT TIME ZONE 'Asia/Shanghai' as real_chat_time,
-    chat_title,
-    COALESCE(
-        CASE
-            WHEN messages->0->>'role' = 'user' AND LENGTH(TRIM(messages->0->>'text')) > 0
-            THEN LEFT(messages->0->>'text', 50)
-            WHEN messages->1->>'role' = 'user' AND LENGTH(TRIM(messages->1->>'text')) > 0
-            THEN LEFT(messages->1->>'text', 50)
-            ELSE NULL
-        END,
-        '(无用户问题)'
-    ) as first_question
-FROM chat_logs
-WHERE DATE(created_at AT TIME ZONE 'Asia/Shanghai') = '2025-10-05'
-ORDER BY created_at;
-```
+Quick links:
+- [ChatGPT Sync Setup](SETUP.md#chatgpt-sync-setup) - chat_logs table
+- [Page Upload Setup](SETUP.md#page-upload-setup) - page_uploads table
+- [Troubleshooting](SETUP.md#troubleshooting) - Common issues and solutions
+- [Query Examples](SETUP.md#query-examples) - Useful SQL queries
 
 ## Data Format
 
+### ChatGPT Conversations (chat_logs)
 Each synced conversation is stored as a single row containing:
-
 - **Basic info**: chat_id, chat_url, chat_title, timestamps
-- **Messages array**: `[{idx, role, text, html}, ...]` 
+- **Messages array**: `[{idx, role, text, html}, ...]`
 - **Metadata**: user agent, source method (api/dom), viewport info
 
-## Security Notes
+### Uploaded Pages (page_uploads)
+Each uploaded web page contains:
+- **Page info**: page_url (unique), page_title, created_at, updated_at
+- **Content**: page_content (Markdown format)
+- **Metadata**: user agent, viewport, content length
 
-- Uses Supabase anonymous key (public, RLS-protected)
-- Only allows INSERT operations from web clients
-- No sensitive data is exposed in the userscript
-
-## Table Schema Details
-
-The `chat_logs` table structure:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | uuid | Primary key, auto-generated |
-| `created_at` | timestamptz | Record creation timestamp |
-| `collected_at` | timestamptz | When conversation was captured |
-| `started_at` | timestamptz | When conversation was started (from ChatGPT API) |
-| `chat_id` | text | ChatGPT conversation ID |
-| `chat_url` | text | Full URL of the conversation |
-| `chat_title` | text | Conversation title |
-| `page_title` | text | HTML page title |
-| `messages` | jsonb | Array of conversation messages |
-| `meta` | jsonb | Client metadata (UA, source, batch_sync, etc.) |
-
-### Indexes Created
-- `chat_logs_created_at_idx`: B-tree on created_at (DESC) for time-based queries
-- `chat_logs_chat_id_idx`: B-tree on chat_id for conversation lookups
-- `chat_logs_gin_msgs`: GIN index on messages JSONB for full-text search
-
-### Security Policies
-- RLS enabled with anonymous insert-only access
-- Prevents unauthorized data access while allowing sync operations
+See [SETUP.md](SETUP.md) for detailed table schemas and security policies.
 
 ## Development
 
 ### Project Structure
 ```
 src/
-├── config.js       - Theme, CONFIG, PageDetector
-├── chatgpt.js      - ChatGPT module (UI, batch sync, data extraction)
-├── supabase.js     - Supabase module (config helper, auto-detection)
-└── main.js         - Initialization logic
+├── config.js         - Theme, CONFIG, PageDetector
+├── chatgpt.js        - ChatGPT module (UI, batch sync, data extraction)
+├── supabase.js       - Supabase module (config helper, auto-detection)
+├── page-uploader.js  - Page upload module (HTML→Markdown, upload)
+└── main.js           - Initialization logic
 
-build.js            - Build script to generate chat-syncer-unified.user.js
+build.js              - Build script to generate chat-syncer-unified.user.js
+SETUP.md              - Complete database setup guide
 ```
 
 ### Building
