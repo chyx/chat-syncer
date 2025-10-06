@@ -457,6 +457,32 @@ const PageUploaderModule = {
         console.log(`Upload button for ${domain}:`, newState ? 'ON' : 'OFF');
     },
 
+    // Update upload time display
+    async updateUploadTimeDisplay() {
+        const uploadButton = document.getElementById('page-upload-button');
+        if (!uploadButton) return;
+
+        // Remove existing time label if present
+        const existingLabel = uploadButton.querySelector('span');
+        if (existingLabel) {
+            existingLabel.remove();
+        }
+
+        // Query and display new upload time
+        const lastUploadTime = await this.queryLastUploadTime();
+        if (lastUploadTime) {
+            const relativeTime = this.formatRelativeTime(lastUploadTime);
+            const timeLabel = document.createElement('span');
+            timeLabel.style.cssText = `
+                font-size: 12px;
+                color: #6b7280;
+                margin-left: 8px;
+            `;
+            timeLabel.textContent = `(${relativeTime})`;
+            uploadButton.appendChild(timeLabel);
+        }
+    },
+
     // Initialize the page uploader
     init() {
         // Register Tampermonkey menu command to toggle button
@@ -480,6 +506,16 @@ const PageUploaderModule = {
             } else {
                 this.createUploadButton();
             }
+
+            // Monitor URL changes and update upload time display
+            let lastUrl = window.location.href;
+            setInterval(() => {
+                const currentUrl = window.location.href;
+                if (currentUrl !== lastUrl) {
+                    lastUrl = currentUrl;
+                    this.updateUploadTimeDisplay();
+                }
+            }, 1000);
         }
 
         console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);

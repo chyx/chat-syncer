@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.6
+// @version      1.6.7
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -21,7 +21,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.6.6';
+    const SCRIPT_VERSION = '1.6.7';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -1000,7 +1000,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.6'
+                        version: '1.6.7'
                     }
                 };
 
@@ -1243,7 +1243,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.6.6',
+                    version: '1.6.7',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -2141,6 +2141,32 @@ const PageUploaderModule = {
         console.log(`Upload button for ${domain}:`, newState ? 'ON' : 'OFF');
     },
 
+    // Update upload time display
+    async updateUploadTimeDisplay() {
+        const uploadButton = document.getElementById('page-upload-button');
+        if (!uploadButton) return;
+
+        // Remove existing time label if present
+        const existingLabel = uploadButton.querySelector('span');
+        if (existingLabel) {
+            existingLabel.remove();
+        }
+
+        // Query and display new upload time
+        const lastUploadTime = await this.queryLastUploadTime();
+        if (lastUploadTime) {
+            const relativeTime = this.formatRelativeTime(lastUploadTime);
+            const timeLabel = document.createElement('span');
+            timeLabel.style.cssText = `
+                font-size: 12px;
+                color: #6b7280;
+                margin-left: 8px;
+            `;
+            timeLabel.textContent = `(${relativeTime})`;
+            uploadButton.appendChild(timeLabel);
+        }
+    },
+
     // Initialize the page uploader
     init() {
         // Register Tampermonkey menu command to toggle button
@@ -2164,6 +2190,16 @@ const PageUploaderModule = {
             } else {
                 this.createUploadButton();
             }
+
+            // Monitor URL changes and update upload time display
+            let lastUrl = window.location.href;
+            setInterval(() => {
+                const currentUrl = window.location.href;
+                if (currentUrl !== lastUrl) {
+                    lastUrl = currentUrl;
+                    this.updateUploadTimeDisplay();
+                }
+            }, 1000);
         }
 
         console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);
