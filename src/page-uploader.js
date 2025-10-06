@@ -215,36 +215,44 @@ const PageUploaderModule = {
 
             this.showUploadStatus('正在上传到 Supabase...');
 
-            // Upload to Supabase with UPSERT
+            // Upload to Supabase with UPSERT using GM_xmlhttpRequest (bypasses CSP)
             // Using onConflict parameter for proper UPSERT behavior
-            const response = await fetch(`${supabaseUrl}/rest/v1/page_uploads?on_conflict=page_url`, {
-                method: 'POST',
-                headers: {
-                    'apikey': supabaseKey,
-                    'Authorization': `Bearer ${supabaseKey}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates,return=minimal'
-                },
-                body: JSON.stringify({
-                    page_url: pageUrl,
-                    page_title: pageTitle,
-                    page_content: pageContent,
-                    updated_at: new Date().toISOString(),
-                    meta: {
-                        user_agent: navigator.userAgent,
-                        viewport: {
-                            width: window.innerWidth,
-                            height: window.innerHeight
-                        },
-                        content_length: pageContent.length
+            await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: `${supabaseUrl}/rest/v1/page_uploads?on_conflict=page_url`,
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates,return=minimal'
+                    },
+                    data: JSON.stringify({
+                        page_url: pageUrl,
+                        page_title: pageTitle,
+                        page_content: pageContent,
+                        updated_at: new Date().toISOString(),
+                        meta: {
+                            user_agent: navigator.userAgent,
+                            viewport: {
+                                width: window.innerWidth,
+                                height: window.innerHeight
+                            },
+                            content_length: pageContent.length
+                        }
+                    }),
+                    onload: function(response) {
+                        if (response.status >= 200 && response.status < 300) {
+                            resolve(response);
+                        } else {
+                            reject(new Error(`上传失败: ${response.status} - ${response.responseText}`));
+                        }
+                    },
+                    onerror: function(error) {
+                        reject(new Error('网络请求失败'));
                     }
-                })
+                });
             });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`上传失败: ${response.status} - ${errorText}`);
-            }
 
             this.showUploadStatus('✅ 上传成功！', 'success');
 
