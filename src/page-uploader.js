@@ -280,15 +280,102 @@ const PageUploaderModule = {
         }
     },
 
-    // Initialize the page uploader (add Tampermonkey menu)
+    // Create upload button in bottom-right corner
+    createUploadButton() {
+        const button = document.createElement('button');
+        button.id = 'page-upload-button';
+        button.innerHTML = '📤 Upload Page';
+        button.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            background: #10a37f;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        `;
+
+        button.onmouseover = () => {
+            button.style.background = '#0d8f6b';
+            button.style.transform = 'translateY(-2px)';
+            button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.3)';
+        };
+
+        button.onmouseout = () => {
+            button.style.background = '#10a37f';
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+        };
+
+        button.onclick = () => {
+            this.uploadPage();
+        };
+
+        document.body.appendChild(button);
+        return button;
+    },
+
+    // Toggle upload button visibility
+    toggleUploadButton() {
+        const currentState = GM_getValue('page_uploader_button_visible', false);
+        const newState = !currentState;
+        GM_setValue('page_uploader_button_visible', newState);
+
+        const button = document.getElementById('page-upload-button');
+        if (newState) {
+            // Show button
+            if (!button) {
+                this.createUploadButton();
+            }
+            this.showUploadStatus('✅ Upload button enabled', 'success');
+        } else {
+            // Hide button
+            if (button) {
+                button.remove();
+            }
+            this.showUploadStatus('Upload button disabled', 'info');
+        }
+
+        // Update menu command text
+        this.updateMenuCommand();
+    },
+
+    // Update menu command text based on current state
+    updateMenuCommand() {
+        // Menu commands can't be updated dynamically, so we just log the state
+        const isVisible = GM_getValue('page_uploader_button_visible', false);
+        console.log('Upload button state:', isVisible ? 'ON' : 'OFF');
+    },
+
+    // Initialize the page uploader
     init() {
-        // Register Tampermonkey menu command
+        // Register Tampermonkey menu command to toggle button
         if (typeof GM_registerMenuCommand !== 'undefined') {
-            GM_registerMenuCommand('Upload Page', () => {
-                this.uploadPage();
+            GM_registerMenuCommand('Toggle Upload Button', () => {
+                this.toggleUploadButton();
             });
         }
 
-        console.log('Page Uploader Module initialized');
+        // Check if button should be visible on page load
+        const isVisible = GM_getValue('page_uploader_button_visible', false);
+        if (isVisible) {
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    this.createUploadButton();
+                });
+            } else {
+                this.createUploadButton();
+            }
+        }
+
+        console.log('Page Uploader Module initialized (button:', isVisible ? 'ON' : 'OFF', ')');
     }
 };
