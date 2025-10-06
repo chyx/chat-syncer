@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.3
+// @version      1.6.4
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -21,7 +21,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.6.3';
+    const SCRIPT_VERSION = '1.6.4';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -582,7 +582,8 @@ const ChatGPTModule = {
 
                 <div id="sync-results" style="margin-bottom: 16px; font-size: 14px;">
                     <div>✅ <span id="success-count">0</span> 条新增</div>
-                    <div>🔄 <span id="skip-count">0</span> 条更新</div>
+                    <div>🔄 <span id="update-count">0</span> 条更新</div>
+                    <div>⏭️ <span id="skip-count">0</span> 条无变化</div>
                     <div>❌ <span id="error-count">0</span> 条失败</div>
                 </div>
 
@@ -997,7 +998,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.4.1'
+                        version: '1.6.4'
                     }
                 };
 
@@ -1108,12 +1109,13 @@ const ChatGPTModule = {
             const progressBar = modal.querySelector('#progress-bar');
             const progressText = modal.querySelector('#progress-text');
             const successCount = modal.querySelector('#success-count');
-            const errorCount = modal.querySelector('#error-count');
+            const updateCount = modal.querySelector('#update-count');
             const skipCount = modal.querySelector('#skip-count');
+            const errorCount = modal.querySelector('#error-count');
             const errorDetails = modal.querySelector('#error-details');
             const errorList = modal.querySelector('#error-list');
 
-            let stats = { success: 0, error: 0, skip: 0 };
+            let stats = { success: 0, update: 0, skip: 0, error: 0 };
             let errorMessages = [];
 
             cancelBtn.onclick = () => {
@@ -1156,12 +1158,15 @@ const ChatGPTModule = {
 
                     try {
                         const result = await this.syncSingleConversation(conv);
-                        if (result && result.isUpdate) {
-                            stats.skip++; // 更新操作计入"跳过"（实际是更新）
-                            skipCount.textContent = stats.skip;
-                        } else {
-                            stats.success++; // 新插入操作
+                        if (result.status === 'new') {
+                            stats.success++;
                             successCount.textContent = stats.success;
+                        } else if (result.status === 'updated') {
+                            stats.update++;
+                            updateCount.textContent = stats.update;
+                        } else if (result.status === 'unchanged') {
+                            stats.skip++;
+                            skipCount.textContent = stats.skip;
                         }
                     } catch (error) {
                         console.error(`同步对话 ${conv.id} 失败:`, error);
@@ -1182,7 +1187,7 @@ const ChatGPTModule = {
                 }
 
                 if (!this.shouldCancel) {
-                    progressText.textContent = `同步完成！新增 ${stats.success} 条，更新 ${stats.skip} 条，失败 ${stats.error} 条`;
+                    progressText.textContent = `同步完成！新增 ${stats.success} 条，更新 ${stats.update} 条，无变化 ${stats.skip} 条，失败 ${stats.error} 条`;
                 }
 
             } catch (error) {
@@ -1212,13 +1217,18 @@ const ChatGPTModule = {
                 throw new Error('对话无有效消息');
             }
 
+            const chatId = conv.id || conversationInfo.id;
+
+            // 先检查数据库中是否存在该对话
+            const existingRecord = await this.fetchExistingRecord(chatId);
+
             // 创建上传记录
             const createTime = this.safeTimestampToISO(conversationInfo.create_time);
             const record = {
-                created_at: createTime || new Date().toISOString(), // 使用对话创建时间，fallback 到当前时间
+                created_at: createTime || new Date().toISOString(),
                 collected_at: new Date().toISOString(),
                 started_at: createTime,
-                chat_id: conv.id || conversationInfo.id,
+                chat_id: chatId,
                 chat_url: `https://chatgpt.com/c/${conversationInfo.id}`,
                 chat_title: conv.title || conversationInfo.title || 'Untitled',
                 page_title: conv.title || conversationInfo.title || '',
@@ -1231,20 +1241,81 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.3.2',
+                    version: '1.6.4',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
                 }
             };
 
+            // 如果存在记录，比较内容是否有变化
+            if (existingRecord) {
+                const messagesChanged = this.compareMessages(existingRecord.messages, messages);
+                if (!messagesChanged) {
+                    // 内容完全相同，无需更新
+                    return { status: 'unchanged' };
+                }
+            }
+
             // 上传到 Supabase (数据库会自动处理重复的chat_id)
             const response = await ChatGPTModule.ChatSyncer.uploadToSupabase(record);
 
-            // 检查是否为更新操作（HTTP 200 且返回数据）
-            // INSERT 返回 201，UPDATE 返回 200
-            const isUpdate = response.status === 200;
-            return { isUpdate };
+            // 判断操作类型
+            if (existingRecord) {
+                return { status: 'updated' };
+            } else {
+                return { status: 'new' };
+            }
+        },
+
+        // 从 Supabase 获取现有记录
+        async fetchExistingRecord(chatId) {
+            const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/${CONFIG.get('TABLE_NAME')}?chat_id=eq.${chatId}&select=messages`;
+
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    headers: {
+                        'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
+                        'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    onload: function(response) {
+                        if (response.status === 200) {
+                            try {
+                                const data = JSON.parse(response.responseText);
+                                resolve(data && data.length > 0 ? data[0] : null);
+                            } catch (e) {
+                                resolve(null);
+                            }
+                        } else {
+                            resolve(null);
+                        }
+                    },
+                    onerror: function() {
+                        resolve(null);
+                    }
+                });
+            });
+        },
+
+        // 比较两个消息数组是否相同
+        compareMessages(oldMessages, newMessages) {
+            if (!oldMessages || !newMessages) return true;
+            if (oldMessages.length !== newMessages.length) return true;
+
+            for (let i = 0; i < oldMessages.length; i++) {
+                const oldMsg = oldMessages[i];
+                const newMsg = newMessages[i];
+
+                // 比较关键字段
+                if (oldMsg.role !== newMsg.role || oldMsg.text !== newMsg.text) {
+                    return true;
+                }
+            }
+
+            return false; // 完全相同
         }
     },
 
