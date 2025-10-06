@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.5
+// @version      1.6.6
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -21,7 +21,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.6.5';
+    const SCRIPT_VERSION = '1.6.6';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -1000,7 +1000,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.5'
+                        version: '1.6.6'
                     }
                 };
 
@@ -1243,7 +1243,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.6.4',
+                    version: '1.6.6',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1952,6 +1952,78 @@ const PageUploaderModule = {
         }
     },
 
+    // Query last upload time for current page
+    async queryLastUploadTime() {
+        const supabaseUrl = CONFIG.get('SUPABASE_URL');
+        const supabaseKey = CONFIG.get('SUPABASE_ANON_KEY');
+
+        if (!supabaseUrl || !supabaseKey) {
+            return null;
+        }
+
+        const pageUrl = window.location.href;
+
+        return new Promise((resolve) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: `${supabaseUrl}/rest/v1/page_uploads?page_url=eq.${encodeURIComponent(pageUrl)}&select=updated_at`,
+                headers: {
+                    'apikey': supabaseKey,
+                    'Authorization': `Bearer ${supabaseKey}`,
+                    'Content-Type': 'application/json'
+                },
+                onload: function(response) {
+                    if (response.status === 200) {
+                        try {
+                            const data = JSON.parse(response.responseText);
+                            if (data && data.length > 0) {
+                                resolve(data[0].updated_at);
+                            } else {
+                                resolve(null);
+                            }
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                },
+                onerror: function() {
+                    resolve(null);
+                }
+            });
+        });
+    },
+
+    // Format relative time (e.g., "2小时前", "3天前")
+    formatRelativeTime(timestamp) {
+        if (!timestamp) return null;
+
+        const now = new Date();
+        const past = new Date(timestamp);
+        const diffMs = now - past;
+        const diffSeconds = Math.floor(diffMs / 1000);
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        const diffMonths = Math.floor(diffDays / 30);
+        const diffYears = Math.floor(diffDays / 365);
+
+        if (diffSeconds < 60) {
+            return '刚刚';
+        } else if (diffMinutes < 60) {
+            return `${diffMinutes}分钟前`;
+        } else if (diffHours < 24) {
+            return `${diffHours}小时前`;
+        } else if (diffDays < 30) {
+            return `${diffDays}天前`;
+        } else if (diffMonths < 12) {
+            return `${diffMonths}个月前`;
+        } else {
+            return `${diffYears}年前`;
+        }
+    },
+
     // Show upload status
     showUploadStatus(message, type = 'info') {
         // Remove existing status
@@ -1995,7 +2067,7 @@ const PageUploaderModule = {
     },
 
     // Create upload button in bottom-right corner
-    createUploadButton() {
+    async createUploadButton() {
         // Create container for buttons
         const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
         container.id = 'page-upload-button-container';
@@ -2015,6 +2087,20 @@ const PageUploaderModule = {
         uploadButton.style.bottom = 'auto';
         uploadButton.style.right = 'auto';
 
+        // Query and display last upload time
+        const lastUploadTime = await this.queryLastUploadTime();
+        if (lastUploadTime) {
+            const relativeTime = this.formatRelativeTime(lastUploadTime);
+            const timeLabel = document.createElement('span');
+            timeLabel.style.cssText = `
+                font-size: 12px;
+                color: #6b7280;
+                margin-left: 8px;
+            `;
+            timeLabel.textContent = `(${relativeTime})`;
+            uploadButton.appendChild(timeLabel);
+        }
+
         // Create update script button
         const updateButton = UIHelpers.createUpdateScriptButton(container);
         updateButton.style.position = 'relative';
@@ -2029,7 +2115,7 @@ const PageUploaderModule = {
     },
 
     // Toggle upload button visibility (per-domain)
-    toggleUploadButton() {
+    async toggleUploadButton() {
         const storageKey = this.getStorageKey();
         const currentState = GM_getValue(storageKey, false);
         const newState = !currentState;
@@ -2041,7 +2127,7 @@ const PageUploaderModule = {
         if (newState) {
             // Show button
             if (!container) {
-                this.createUploadButton();
+                await this.createUploadButton();
             }
             this.showUploadStatus(`✅ Upload button enabled for ${domain}`, 'success');
         } else {
