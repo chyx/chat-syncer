@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.5.1
+// @version      1.5.2
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -1716,13 +1716,14 @@ const PageUploaderModule = {
             this.showUploadStatus('正在上传到 Supabase...');
 
             // Upload to Supabase with UPSERT
-            const response = await fetch(`${supabaseUrl}/rest/v1/page_uploads`, {
+            // Using onConflict parameter for proper UPSERT behavior
+            const response = await fetch(`${supabaseUrl}/rest/v1/page_uploads?on_conflict=page_url`, {
                 method: 'POST',
                 headers: {
                     'apikey': supabaseKey,
                     'Authorization': `Bearer ${supabaseKey}`,
                     'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates'
+                    'Prefer': 'resolution=merge-duplicates,return=minimal'
                 },
                 body: JSON.stringify({
                     page_url: pageUrl,

@@ -195,13 +195,14 @@ const PageUploaderModule = {
             this.showUploadStatus('正在上传到 Supabase...');
 
             // Upload to Supabase with UPSERT
-            const response = await fetch(`${supabaseUrl}/rest/v1/page_uploads`, {
+            // Using onConflict parameter for proper UPSERT behavior
+            const response = await fetch(`${supabaseUrl}/rest/v1/page_uploads?on_conflict=page_url`, {
                 method: 'POST',
                 headers: {
                     'apikey': supabaseKey,
                     'Authorization': `Bearer ${supabaseKey}`,
                     'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates'
+                    'Prefer': 'resolution=merge-duplicates,return=minimal'
                 },
                 body: JSON.stringify({
                     page_url: pageUrl,
