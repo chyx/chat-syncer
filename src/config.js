@@ -44,6 +44,16 @@ const injectThemeCSS = () => {
             --text-secondary: #d1d5db;
             --text-error: #fca5a5;
         }
+
+        /* Spin animation for loading indicator */
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
     `;
     document.head.appendChild(style);
 };

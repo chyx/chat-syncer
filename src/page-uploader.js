@@ -403,18 +403,25 @@ const PageUploaderModule = {
         uploadButton.style.bottom = 'auto';
         uploadButton.style.right = 'auto';
 
+        // Add loading indicator
+        const timeLabel = document.createElement('span');
+        timeLabel.id = 'upload-time-label';
+        timeLabel.style.cssText = `
+            font-size: 12px;
+            color: #6b7280;
+            margin-left: 8px;
+        `;
+        timeLabel.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span>`;
+        uploadButton.appendChild(timeLabel);
+
         // Query and display last upload time
         const lastUploadTime = await this.queryLastUploadTime();
         if (lastUploadTime) {
             const relativeTime = this.formatRelativeTime(lastUploadTime);
-            const timeLabel = document.createElement('span');
-            timeLabel.style.cssText = `
-                font-size: 12px;
-                color: #6b7280;
-                margin-left: 8px;
-            `;
             timeLabel.textContent = `(${relativeTime})`;
-            uploadButton.appendChild(timeLabel);
+        } else {
+            // Remove loading indicator if no upload record found
+            timeLabel.remove();
         }
 
         // Create update script button
@@ -463,23 +470,30 @@ const PageUploaderModule = {
         if (!uploadButton) return;
 
         // Remove existing time label if present
-        const existingLabel = uploadButton.querySelector('span');
-        if (existingLabel) {
-            existingLabel.remove();
+        let timeLabel = uploadButton.querySelector('#upload-time-label');
+        if (timeLabel) {
+            timeLabel.remove();
         }
+
+        // Add loading indicator
+        timeLabel = document.createElement('span');
+        timeLabel.id = 'upload-time-label';
+        timeLabel.style.cssText = `
+            font-size: 12px;
+            color: #6b7280;
+            margin-left: 8px;
+        `;
+        timeLabel.innerHTML = `<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span>`;
+        uploadButton.appendChild(timeLabel);
 
         // Query and display new upload time
         const lastUploadTime = await this.queryLastUploadTime();
         if (lastUploadTime) {
             const relativeTime = this.formatRelativeTime(lastUploadTime);
-            const timeLabel = document.createElement('span');
-            timeLabel.style.cssText = `
-                font-size: 12px;
-                color: #6b7280;
-                margin-left: 8px;
-            `;
             timeLabel.textContent = `(${relativeTime})`;
-            uploadButton.appendChild(timeLabel);
+        } else {
+            // Remove loading indicator if no upload record found
+            timeLabel.remove();
         }
     },
 
