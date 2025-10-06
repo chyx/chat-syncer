@@ -733,7 +733,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.4.0'
+                        version: '1.4.1'
                     }
                 };
 
