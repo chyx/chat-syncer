@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.4
+// @version      1.6.5
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -21,7 +21,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.6.4';
+    const SCRIPT_VERSION = '1.6.5';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -280,10 +280,13 @@ const UIHelpers = {
             onClick: () => {
                 window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
             },
-            position: { bottom: '20px', right: '20px' },
+            position: {},
             color: 'blue',
             id: 'update-script-button'
         });
+
+        // Override position to relative for container usage
+        updateButton.style.position = 'relative';
 
         // Initially hidden
         updateButton.style.opacity = '0';
@@ -413,7 +416,6 @@ const ChatGPTModule = {
 
             // 更新脚本按钮（hover显示）
             const updateButton = UIHelpers.createUpdateScriptButton(container);
-            updateButton.style.position = 'relative';
             updateButton.style.minWidth = '180px';
             updateButton.style.textAlign = 'center';
             updateButton.style.fontWeight = '600';
@@ -998,7 +1000,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.4'
+                        version: '1.6.5'
                     }
                 };
 

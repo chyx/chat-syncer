@@ -74,7 +74,6 @@ const ChatGPTModule = {
 
             // 更新脚本按钮（hover显示）
             const updateButton = UIHelpers.createUpdateScriptButton(container);
-            updateButton.style.position = 'relative';
             updateButton.style.minWidth = '180px';
             updateButton.style.textAlign = 'center';
             updateButton.style.fontWeight = '600';
@@ -659,7 +658,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.4'
+                        version: '1.6.5'
                     }
                 };
 

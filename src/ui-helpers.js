@@ -108,10 +108,13 @@ const UIHelpers = {
             onClick: () => {
                 window.open('https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js', '_blank');
             },
-            position: { bottom: '20px', right: '20px' },
+            position: {},
             color: 'blue',
             id: 'update-script-button'
         });
+
+        // Override position to relative for container usage
+        updateButton.style.position = 'relative';
 
         // Initially hidden
         updateButton.style.opacity = '0';
