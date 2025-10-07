@@ -3,6 +3,9 @@
 // ===============================
 
 const PageUploaderModule = {
+    // Timer for periodic time display updates
+    updateTimeTimer: null,
+
     // Get current domain for per-domain settings
     getCurrentDomain() {
         try {
@@ -259,6 +262,9 @@ const PageUploaderModule = {
             // Update upload time display on button
             await this.updateUploadTimeDisplay();
 
+            // Start periodic updates with exponential backoff (1s, 2s, 4s, 8s, ...)
+            this.startPeriodicTimeUpdate();
+
             console.log('Page uploaded successfully:', {
                 url: pageUrl,
                 title: pageTitle,
@@ -497,6 +503,42 @@ const PageUploaderModule = {
         } else {
             // Remove loading indicator if no upload record found
             timeLabel.remove();
+        }
+    },
+
+    // Start periodic time display updates with exponential backoff
+    // Updates at: 1s, 2s, 4s, 8s, 16s, 32s, 64s (max ~1 minute)
+    startPeriodicTimeUpdate() {
+        // Clear any existing timer
+        if (this.updateTimeTimer) {
+            clearTimeout(this.updateTimeTimer);
+        }
+
+        let delay = 1000; // Start with 1 second
+        const maxDelay = 64000; // Max 64 seconds
+
+        const scheduleUpdate = () => {
+            this.updateTimeTimer = setTimeout(async () => {
+                await this.updateUploadTimeDisplay();
+
+                // Double the delay for next update (exponential backoff)
+                delay = Math.min(delay * 2, maxDelay);
+
+                // Schedule next update if we haven't reached max delay
+                if (delay <= maxDelay) {
+                    scheduleUpdate();
+                }
+            }, delay);
+        };
+
+        scheduleUpdate();
+    },
+
+    // Stop periodic time updates
+    stopPeriodicTimeUpdate() {
+        if (this.updateTimeTimer) {
+            clearTimeout(this.updateTimeTimer);
+            this.updateTimeTimer = null;
         }
     },
 

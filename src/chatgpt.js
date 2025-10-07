@@ -5,49 +5,25 @@
 const ChatGPTModule = {
     // UI Components
     UI: {
-        createSyncButton() {
-            const button = document.createElement('button');
-            button.innerHTML = 'Sync → Supabase';
-            button.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                right: 20px;
-                z-index: 10000;
-                background: #10a37f;
-                color: white;
-                border: none;
-                padding: 10px 16px;
-                border-radius: 8px;
-                font-size: 14px;
-                font-weight: 500;
-                cursor: pointer;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-                transition: all 0.2s ease;
-            `;
-
-            button.onmouseover = () => {
-                button.style.background = '#0d8f6b';
-                button.style.transform = 'translateY(-1px)';
-            };
-
-            button.onmouseout = () => {
-                button.style.background = '#10a37f';
-                button.style.transform = 'translateY(0)';
-            };
-
-            button.onclick = () => ChatGPTModule.ChatSyncer.syncConversation();
-            return button;
-        },
-
         createBatchSyncButton() {
             // Create container for buttons
             const container = UIHelpers.createButtonContainer({ bottom: '80px', right: '20px' });
             container.id = 'batch-sync-container';
 
-            // 快速同步按钮（默认20条）
+            // 根据页面类型决定主按钮功能
+            const pageType = PageDetector.getCurrentPageType();
+            const isConversationPage = pageType === 'chatgpt_conversation';
+
+            // 主按钮：对话页同步当前对话，主页批量同步
             const quickButton = UIHelpers.createButton({
-                text: '📚 批量同步最近20条',
-                onClick: () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20),
+                text: isConversationPage ? '💾 同步当前对话' : '📚 批量同步最近20条',
+                onClick: () => {
+                    if (isConversationPage) {
+                        ChatGPTModule.ChatSyncer.syncConversation();
+                    } else {
+                        ChatGPTModule.BatchSyncer.startBatchSync(0, 20);
+                    }
+                },
                 position: {},
                 color: 'purple'
             });
@@ -101,10 +77,10 @@ const ChatGPTModule = {
                 updateButton.style.maxHeight = '0';
             });
 
-            // 反向添加，让新按钮出现在上方，不影响原按钮位置
-            container.appendChild(updateButton);
-            container.appendChild(customButton);
+            // 因为使用 column-reverse，按正常顺序添加即可（最后添加的会显示在最下面）
             container.appendChild(quickButton);
+            container.appendChild(customButton);
+            container.appendChild(updateButton);
             return container;
         },
 
@@ -659,7 +635,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.9'
+                        version: '1.7.0'
                     }
                 };
 
@@ -902,7 +878,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.6.9',
+                    version: '1.7.0',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1008,25 +984,22 @@ const ChatGPTModule = {
         const pageType = PageDetector.getCurrentPageType();
         console.log('Detected page type:', pageType);
 
-        if (pageType === 'chatgpt_home') {
-            // 主页：显示批量同步按钮
+        if (pageType === 'chatgpt_home' || pageType === 'chatgpt_conversation') {
+            // 主页和对话页都显示批量同步按钮
             console.log('Creating batch sync button...');
             const batchSyncButton = this.UI.createBatchSyncButton();
             console.log('Batch sync button created:', batchSyncButton);
             console.log('Appending to body...');
             document.body.appendChild(batchSyncButton);
-            console.log('✅ ChatGPT 主页批量同步功能已加载');
-            console.log('Button in DOM:', document.getElementById('batch-sync-container'));
-        } else if (pageType === 'chatgpt_conversation') {
-            // 对话页：显示普通同步按钮
-            console.log('Creating sync button...');
-            const syncButton = this.UI.createSyncButton();
-            console.log('Sync button created:', syncButton);
-            document.body.appendChild(syncButton);
 
-            // Setup keyboard shortcut
-            this.setupKeyboardShortcut();
-            console.log('✅ ChatGPT 对话页同步功能已加载');
+            if (pageType === 'chatgpt_conversation') {
+                // Setup keyboard shortcut for conversation page
+                this.setupKeyboardShortcut();
+                console.log('✅ ChatGPT 对话页批量同步功能已加载');
+            } else {
+                console.log('✅ ChatGPT 主页批量同步功能已加载');
+            }
+            console.log('Button in DOM:', document.getElementById('batch-sync-container'));
         } else {
             console.log('⚠️ Page type not recognized, no button will be added');
         }
