@@ -335,7 +335,6 @@ function loadUserScript() {
         global.CONFIG = CONFIG;
         global.UI = UI;
         global.DataExtractor = DataExtractor;
-        global.ChatSyncer = ChatSyncer;
         `;
         
         // 执行脚本
@@ -546,7 +545,7 @@ function runTests() {
     // 由于这是模拟环境，我们测试函数是否正确构建请求
     try {
         // 这里不会实际发送请求，但会测试函数逻辑
-        const uploadPromise = ChatSyncer.uploadToSupabase(testRecord);
+        const uploadPromise = ChatGPTModule.BatchSyncer.uploadToSupabase(testRecord);
         assertNotNull(uploadPromise, 'Supabase 上传函数返回 Promise');
     } catch (error) {
         assert(false, `Supabase 上传函数调用失败: ${error.message}`);
@@ -595,7 +594,7 @@ function runTests() {
     assertNotNull(CONFIG, 'CONFIG 对象存在');
     assertNotNull(UI, 'UI 对象存在');
     assertNotNull(DataExtractor, 'DataExtractor 对象存在');
-    assertNotNull(ChatSyncer, 'ChatSyncer 对象存在');
+    assertNotNull(ChatGPTModule.BatchSyncer, 'BatchSyncer 对象存在');
     
     // 测试关键方法 (统一脚本中的模块结构)
     assertType(CONFIG.get, 'function', 'CONFIG.get 是函数');

@@ -257,7 +257,14 @@ const PageUploaderModule = {
                 });
             });
 
-            this.showUploadStatus('✅ 上传成功！', 'success');
+            // Copy URL to clipboard
+            try {
+                await navigator.clipboard.writeText(pageUrl);
+                this.showUploadStatus('✅ 上传成功！URL 已复制到剪贴板', 'success');
+            } catch (clipboardError) {
+                console.warn('Failed to copy to clipboard:', clipboardError);
+                this.showUploadStatus('✅ 上传成功！', 'success');
+            }
 
             // Update upload time display on button
             await this.updateUploadTimeDisplay();
@@ -335,7 +342,7 @@ const PageUploaderModule = {
         const diffYears = Math.floor(diffDays / 365);
 
         if (diffSeconds < 60) {
-            return '刚刚';
+            return `${diffSeconds}秒前`;
         } else if (diffMinutes < 60) {
             return `${diffMinutes}分钟前`;
         } else if (diffHours < 24) {
