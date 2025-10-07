@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.7.4
+// @version      1.7.5
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.7.4';
+    const SCRIPT_VERSION = '1.7.5';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -460,28 +460,49 @@ const ChatGPTModule = {
                     return;
                 }
 
-                // 查找页面上的可编辑元素
-                console.log('🔵 开始查找可编辑元素...');
-                const editableElement = this.findEditableElement();
-                console.log('🔵 找到的元素:', editableElement);
-                console.log('🔵 元素标签:', editableElement?.tagName);
-                console.log('🔵 元素ID:', editableElement?.id);
-                console.log('🔵 元素类名:', editableElement?.className);
+                // 复制到系统剪贴板
+                await this.copyToSystemClipboard(clipboardContent);
+                console.log('✅ 已复制到系统剪贴板');
+                this.showStatus('✅ 已复制到剪贴板，可按 Ctrl+V 粘贴', 'success');
 
-                if (!editableElement) {
-                    console.error('❌ 未找到可输入的文本框');
-                    this.showStatus('未找到可输入的文本框', 'error');
-                    return;
-                }
-
-                // 模拟粘贴操作
-                console.log('🔵 开始模拟粘贴操作...');
-                this.simulatePaste(editableElement, clipboardContent);
-                console.log('✅ 粘贴成功');
-                this.showStatus('已粘贴内容', 'success');
             } catch (error) {
-                console.error('❌ 粘贴失败:', error);
-                this.showStatus('粘贴失败: ' + error.message, 'error');
+                console.error('❌ 操作失败:', error);
+                this.showStatus('操作失败: ' + error.message, 'error');
+            }
+        },
+
+        async copyToSystemClipboard(text) {
+            // 尝试使用现代 Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    console.log('✅ 使用 Clipboard API 复制成功');
+                    return;
+                } catch (err) {
+                    console.warn('Clipboard API 失败，尝试备用方案:', err);
+                }
+            }
+
+            // 备用方案：使用传统方法
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            textarea.style.top = '-9999px';
+            document.body.appendChild(textarea);
+
+            try {
+                textarea.select();
+                textarea.setSelectionRange(0, text.length);
+                const successful = document.execCommand('copy');
+
+                if (successful) {
+                    console.log('✅ 使用 execCommand 复制成功');
+                } else {
+                    throw new Error('execCommand 复制失败');
+                }
+            } finally {
+                document.body.removeChild(textarea);
             }
         },
 
@@ -519,97 +540,6 @@ const ChatGPTModule = {
                     }
                 });
             });
-        },
-
-        findEditableElement() {
-            // 先尝试查找获得焦点的元素
-            const focused = document.activeElement;
-            if (this.isEditableElement(focused)) {
-                return focused;
-            }
-
-            // ChatGPT 特定的输入框选择器
-            const selectors = [
-                '#prompt-textarea',
-                'textarea[placeholder*="Message"]',
-                '[contenteditable="true"]',
-                'textarea',
-                'input[type="text"]'
-            ];
-
-            for (const selector of selectors) {
-                const element = document.querySelector(selector);
-                if (element && this.isEditableElement(element)) {
-                    return element;
-                }
-            }
-
-            return null;
-        },
-
-        isEditableElement(element) {
-            if (!element) return false;
-
-            const tagName = element.tagName.toLowerCase();
-            if (tagName === 'textarea') return true;
-            if (tagName === 'input' && ['text', 'search', 'url', 'email'].includes(element.type)) return true;
-            if (element.contentEditable === 'true') return true;
-
-            return false;
-        },
-
-        simulatePaste(element, text) {
-            const tagName = element.tagName.toLowerCase();
-
-            if (tagName === 'textarea' || tagName === 'input') {
-                // 对于 textarea 和 input 元素
-                const start = element.selectionStart || 0;
-                const end = element.selectionEnd || 0;
-                const value = element.value || '';
-
-                // 在光标位置插入文本
-                element.value = value.substring(0, start) + text + value.substring(end);
-
-                // 设置新的光标位置
-                const newPosition = start + text.length;
-                element.selectionStart = newPosition;
-                element.selectionEnd = newPosition;
-
-                // 触发输入事件
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-            } else if (element.contentEditable === 'true') {
-                // 对于 contenteditable 元素
-                element.focus();
-
-                // 尝试使用 document.execCommand (虽然已被弃用，但仍然是最可靠的方法)
-                const success = document.execCommand('insertText', false, text);
-
-                if (!success) {
-                    // 如果 execCommand 失败，回退到直接插入
-                    const selection = window.getSelection();
-                    if (selection.rangeCount > 0) {
-                        const range = selection.getRangeAt(0);
-                        range.deleteContents();
-                        const textNode = document.createTextNode(text);
-                        range.insertNode(textNode);
-                        range.setStartAfter(textNode);
-                        range.setEndAfter(textNode);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                    } else {
-                        // 如果没有选区，直接追加到末尾
-                        element.textContent += text;
-                    }
-                }
-
-                // 触发输入事件
-                element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            // 确保元素获得焦点
-            element.focus();
         },
 
         showCustomSyncModal() {
@@ -1289,7 +1219,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.7.4',
+                    version: '1.7.5',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
