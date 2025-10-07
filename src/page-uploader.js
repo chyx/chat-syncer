@@ -256,6 +256,9 @@ const PageUploaderModule = {
 
             this.showUploadStatus('✅ 上传成功！', 'success');
 
+            // Update upload time display on button
+            await this.updateUploadTimeDisplay();
+
             console.log('Page uploaded successfully:', {
                 url: pageUrl,
                 title: pageTitle,

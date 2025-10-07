@@ -160,7 +160,7 @@ const UIHelpers = {
             ${Object.entries(position).map(([key, value]) => `${key}: ${value};`).join('\n')}
             z-index: 10000;
             display: flex;
-            flex-direction: column;
+            flex-direction: column-reverse;
             gap: 12px;
         `;
         return container;

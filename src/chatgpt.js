@@ -101,9 +101,10 @@ const ChatGPTModule = {
                 updateButton.style.maxHeight = '0';
             });
 
-            container.appendChild(quickButton);
-            container.appendChild(customButton);
+            // 反向添加，让新按钮出现在上方，不影响原按钮位置
             container.appendChild(updateButton);
+            container.appendChild(customButton);
+            container.appendChild(quickButton);
             return container;
         },
 
@@ -658,7 +659,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.8'
+                        version: '1.6.9'
                     }
                 };
 
@@ -901,7 +902,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.6.8',
+                    version: '1.6.9',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time

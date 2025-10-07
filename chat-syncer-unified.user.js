@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.6.8
+// @version      1.6.9
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -21,7 +21,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.6.8';
+    const SCRIPT_VERSION = '1.6.9';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -342,7 +342,7 @@ const UIHelpers = {
             ${Object.entries(position).map(([key, value]) => `${key}: ${value};`).join('\n')}
             z-index: 10000;
             display: flex;
-            flex-direction: column;
+            flex-direction: column-reverse;
             gap: 12px;
         `;
         return container;
@@ -453,9 +453,10 @@ const ChatGPTModule = {
                 updateButton.style.maxHeight = '0';
             });
 
-            container.appendChild(quickButton);
-            container.appendChild(customButton);
+            // 反向添加，让新按钮出现在上方，不影响原按钮位置
             container.appendChild(updateButton);
+            container.appendChild(customButton);
+            container.appendChild(quickButton);
             return container;
         },
 
@@ -1010,7 +1011,7 @@ const ChatGPTModule = {
                             height: window.innerHeight
                         },
                         source: 'unified_script',
-                        version: '1.6.8'
+                        version: '1.6.9'
                     }
                 };
 
@@ -1253,7 +1254,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.6.8',
+                    version: '1.6.9',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1949,6 +1950,9 @@ const PageUploaderModule = {
             });
 
             this.showUploadStatus('✅ 上传成功！', 'success');
+
+            // Update upload time display on button
+            await this.updateUploadTimeDisplay();
 
             console.log('Page uploaded successfully:', {
                 url: pageUrl,
