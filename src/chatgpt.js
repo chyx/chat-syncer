@@ -99,28 +99,40 @@ const ChatGPTModule = {
         },
 
         async handlePaste() {
+            console.log('🔵 粘贴按钮被点击');
             try {
                 // 获取剪贴板内容
+                console.log('🔵 开始获取剪贴板内容...');
                 const clipboardContent = await this.fetchClipboardContent();
+                console.log('🔵 剪贴板内容:', clipboardContent);
 
                 if (!clipboardContent) {
+                    console.warn('⚠️ 剪贴板内容为空');
                     this.showStatus('剪贴板内容为空', 'error');
                     return;
                 }
 
                 // 查找页面上的可编辑元素
+                console.log('🔵 开始查找可编辑元素...');
                 const editableElement = this.findEditableElement();
+                console.log('🔵 找到的元素:', editableElement);
+                console.log('🔵 元素标签:', editableElement?.tagName);
+                console.log('🔵 元素ID:', editableElement?.id);
+                console.log('🔵 元素类名:', editableElement?.className);
 
                 if (!editableElement) {
+                    console.error('❌ 未找到可输入的文本框');
                     this.showStatus('未找到可输入的文本框', 'error');
                     return;
                 }
 
                 // 模拟粘贴操作
+                console.log('🔵 开始模拟粘贴操作...');
                 this.simulatePaste(editableElement, clipboardContent);
+                console.log('✅ 粘贴成功');
                 this.showStatus('已粘贴内容', 'success');
             } catch (error) {
-                console.error('粘贴失败:', error);
+                console.error('❌ 粘贴失败:', error);
                 this.showStatus('粘贴失败: ' + error.message, 'error');
             }
         },
