@@ -452,12 +452,11 @@ function runTests() {
     
     // 4. UI 组件测试
     console.log(colors.yellow, '🎨 测试 UI 组件', colors.reset);
-    
-    // 测试同步按钮创建
-    const syncButton = UI.createSyncButton();
-    assertNotNull(syncButton, '同步按钮创建');
-    assertEqual(syncButton.innerHTML, 'Sync → Supabase', '按钮文本正确');
-    assertNotNull(syncButton.style, '按钮样式存在');
+
+    // 测试批量同步按钮创建
+    const batchSyncContainer = UI.createBatchSyncButton();
+    assertNotNull(batchSyncContainer, '批量同步按钮容器创建');
+    assertNotNull(batchSyncContainer.style, '按钮容器样式存在');
     
     // 测试配置模态框
     assertType(UI.promptConfig, 'function', 'UI.promptConfig 是函数');
@@ -606,12 +605,12 @@ function runTests() {
     global.location.host = 'chatgpt.com';
     
     if (typeof ChatGPTModule !== 'undefined') {
-        assertType(ChatGPTModule.UI.createSyncButton, 'function', 'ChatGPTModule.UI.createSyncButton 是函数');
+        assertType(ChatGPTModule.UI.createBatchSyncButton, 'function', 'ChatGPTModule.UI.createBatchSyncButton 是函数');
         assertType(ChatGPTModule.UI.showStatus, 'function', 'ChatGPTModule.UI.showStatus 是函数');
         assertType(ChatGPTModule.UI.promptConfig, 'function', 'ChatGPTModule.UI.promptConfig 是函数');
         assertType(ChatGPTModule.DataExtractor.getChatId, 'function', 'ChatGPTModule.DataExtractor.getChatId 是函数');
         assertType(ChatGPTModule.DataExtractor.extractViaDOM, 'function', 'ChatGPTModule.DataExtractor.extractViaDOM 是函数');
-        assertType(ChatGPTModule.ChatSyncer.syncConversation, 'function', 'ChatGPTModule.ChatSyncer.syncConversation 是函数');
+        assertType(ChatGPTModule.BatchSyncer.startBatchSync, 'function', 'ChatGPTModule.BatchSyncer.startBatchSync 是函数');
     } else {
         console.log('  ⚠️ ChatGPTModule 在统一脚本中不是全局暴露的对象');
     }

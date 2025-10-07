@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.7.0
+// @version      1.7.1
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.7.0';
+    const SCRIPT_VERSION = '1.7.1';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -358,20 +358,10 @@ const ChatGPTModule = {
             const container = UIHelpers.createButtonContainer({ bottom: '80px', right: '20px' });
             container.id = 'batch-sync-container';
 
-            // 根据页面类型决定主按钮功能
-            const pageType = PageDetector.getCurrentPageType();
-            const isConversationPage = pageType === 'chatgpt_conversation';
-
-            // 主按钮：对话页同步当前对话，主页批量同步
+            // 主按钮：批量同步最近20条（主页和对话页统一）
             const quickButton = UIHelpers.createButton({
-                text: isConversationPage ? '💾 同步当前对话' : '📚 批量同步最近20条',
-                onClick: () => {
-                    if (isConversationPage) {
-                        ChatGPTModule.ChatSyncer.syncConversation();
-                    } else {
-                        ChatGPTModule.BatchSyncer.startBatchSync(0, 20);
-                    }
-                },
+                text: '📚 批量同步最近20条',
+                onClick: () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20),
                 position: {},
                 color: 'purple'
             });
@@ -931,123 +921,6 @@ const ChatGPTModule = {
         }
     },
 
-    // Main syncer class
-    ChatSyncer: {
-        async syncConversation() {
-            try {
-                // 检查配置
-                const url = CONFIG.get('SUPABASE_URL');
-                const key = CONFIG.get('SUPABASE_ANON_KEY');
-
-                console.log('Debug - 检查配置:', {
-                    url: url ? '已设置' : '未设置',
-                    key: key ? '已设置' : '未设置',
-                    gmUrl: GM_getValue('chat_syncer.supabase_url', ''),
-                    gmKey: GM_getValue('chat_syncer.supabase_key', '')
-                });
-
-                if (!url || !key) {
-                    ChatGPTModule.UI.showStatus('需要配置 Supabase 信息', 'error');
-                    const configResult = await ChatGPTModule.UI.promptConfig();
-                    if (!configResult) {
-                        ChatGPTModule.UI.showStatus('配置取消', 'error');
-                        return;
-                    }
-                }
-
-                ChatGPTModule.UI.showStatus('正在提取对话数据...', 'info');
-
-                // 提取对话数据
-                const chatId = ChatGPTModule.DataExtractor.getChatId();
-                const messages = ChatGPTModule.DataExtractor.extractViaDOM();
-
-                if (messages.length === 0) {
-                    ChatGPTModule.UI.showStatus('未找到对话消息', 'error');
-                    return;
-                }
-
-                // 创建上传记录
-                const record = {
-                    collected_at: new Date().toISOString(),
-                    started_at: null, // 单个同步无法获取创建时间
-                    chat_id: chatId,
-                    chat_url: window.location.href,
-                    chat_title: document.title,
-                    page_title: document.querySelector('h1, h2, h3')?.textContent?.trim() || '',
-                    messages: messages,
-                    meta: {
-                        user_agent: navigator.userAgent,
-                        language: navigator.language,
-                        viewport: {
-                            width: window.innerWidth,
-                            height: window.innerHeight
-                        },
-                        source: 'unified_script',
-                        version: '1.7.0'
-                    }
-                };
-
-                ChatGPTModule.UI.showStatus('正在上传到 Supabase...', 'info');
-
-                // 上传到 Supabase
-                await this.uploadToSupabase(record);
-
-                ChatGPTModule.UI.showStatus('✅ 对话已成功同步到 Supabase!', 'success');
-
-            } catch (error) {
-                console.error('同步失败:', error);
-                ChatGPTModule.UI.showStatus('❌ 同步失败: ' + error.message, 'error');
-            }
-        },
-
-        async uploadToSupabase(record) {
-            const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/${CONFIG.get('TABLE_NAME')}?on_conflict=chat_id`;
-
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: url,
-                    headers: {
-                        'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
-                        'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'resolution=merge-duplicates,return=representation'
-                    },
-                    data: JSON.stringify(record),
-                    onload: function(response) {
-                        if (response.status >= 200 && response.status < 300) {
-                            resolve(response);
-                        } else {
-                            let errorMessage = `HTTP ${response.status}`;
-
-                            // 尝试解析错误响应
-                            try {
-                                const errorData = JSON.parse(response.responseText);
-                                if (errorData.message) {
-                                    errorMessage += `: ${errorData.message}`;
-                                } else if (errorData.hint) {
-                                    errorMessage += `: ${errorData.hint}`;
-                                } else if (errorData.details) {
-                                    errorMessage += `: ${errorData.details}`;
-                                } else {
-                                    errorMessage += `: ${response.responseText}`;
-                                }
-                            } catch (e) {
-                                // 如果解析失败，使用原始响应文本
-                                errorMessage += `: ${response.responseText}`;
-                            }
-
-                            reject(new Error(errorMessage));
-                        }
-                    },
-                    onerror: function(error) {
-                        reject(new Error('网络错误 - 无法连接到 Supabase 服务器'));
-                    }
-                });
-            });
-        }
-    },
-
     // Batch syncer class
     BatchSyncer: {
         isRunning: false,
@@ -1226,7 +1099,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.7.0',
+                    version: '1.7.1',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1243,7 +1116,7 @@ const ChatGPTModule = {
             }
 
             // 上传到 Supabase (数据库会自动处理重复的chat_id)
-            const response = await ChatGPTModule.ChatSyncer.uploadToSupabase(record);
+            const response = await this.uploadToSupabase(record);
 
             // 判断操作类型
             if (existingRecord) {
@@ -1251,6 +1124,54 @@ const ChatGPTModule = {
             } else {
                 return { status: 'new' };
             }
+        },
+
+        // 上传记录到 Supabase
+        async uploadToSupabase(record) {
+            const url = `${CONFIG.get('SUPABASE_URL')}/rest/v1/${CONFIG.get('TABLE_NAME')}?on_conflict=chat_id`;
+
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: url,
+                    headers: {
+                        'apikey': CONFIG.get('SUPABASE_ANON_KEY'),
+                        'Authorization': `Bearer ${CONFIG.get('SUPABASE_ANON_KEY')}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates,return=representation'
+                    },
+                    data: JSON.stringify(record),
+                    onload: function(response) {
+                        if (response.status >= 200 && response.status < 300) {
+                            resolve(response);
+                        } else {
+                            let errorMessage = `HTTP ${response.status}`;
+
+                            // 尝试解析错误响应
+                            try {
+                                const errorData = JSON.parse(response.responseText);
+                                if (errorData.message) {
+                                    errorMessage += `: ${errorData.message}`;
+                                } else if (errorData.hint) {
+                                    errorMessage += `: ${errorData.hint}`;
+                                } else if (errorData.details) {
+                                    errorMessage += `: ${errorData.details}`;
+                                } else {
+                                    errorMessage += `: ${response.responseText}`;
+                                }
+                            } catch (e) {
+                                // 如果解析失败，使用原始响应文本
+                                errorMessage += `: ${response.responseText}`;
+                            }
+
+                            reject(new Error(errorMessage));
+                        }
+                    },
+                    onerror: function(error) {
+                        reject(new Error('网络错误 - 无法连接到 Supabase 服务器'));
+                    }
+                });
+            });
         },
 
         // 从 Supabase 获取现有记录
@@ -1304,16 +1225,6 @@ const ChatGPTModule = {
         }
     },
 
-    // Keyboard shortcut handler
-    setupKeyboardShortcut() {
-        document.addEventListener('keydown', (event) => {
-            if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'S') {
-                event.preventDefault();
-                ChatGPTModule.ChatSyncer.syncConversation();
-            }
-        });
-    },
-
     // Initialize ChatGPT functionality
     init() {
         console.log('ChatGPT Module initializing...');
@@ -1341,8 +1252,6 @@ const ChatGPTModule = {
             document.body.appendChild(batchSyncButton);
 
             if (pageType === 'chatgpt_conversation') {
-                // Setup keyboard shortcut for conversation page
-                this.setupKeyboardShortcut();
                 console.log('✅ ChatGPT 对话页批量同步功能已加载');
             } else {
                 console.log('✅ ChatGPT 主页批量同步功能已加载');
