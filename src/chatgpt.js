@@ -99,26 +99,19 @@ const ChatGPTModule = {
         },
 
         async handlePaste() {
-            console.log('🔵 粘贴按钮被点击');
             try {
-                // 获取剪贴板内容
-                console.log('🔵 开始获取剪贴板内容...');
                 const clipboardContent = await this.fetchClipboardContent();
-                console.log('🔵 剪贴板内容:', clipboardContent);
 
                 if (!clipboardContent) {
-                    console.warn('⚠️ 剪贴板内容为空');
                     this.showStatus('剪贴板内容为空', 'error');
                     return;
                 }
 
-                // 复制到系统剪贴板
                 await this.copyToSystemClipboard(clipboardContent);
-                console.log('✅ 已复制到系统剪贴板');
                 this.showStatus('✅ 已复制到剪贴板，可按 Ctrl+V 粘贴', 'success');
 
             } catch (error) {
-                console.error('❌ 操作失败:', error);
+                console.error('复制到剪贴板失败:', error);
                 this.showStatus('操作失败: ' + error.message, 'error');
             }
         },
@@ -128,10 +121,9 @@ const ChatGPTModule = {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 try {
                     await navigator.clipboard.writeText(text);
-                    console.log('✅ 使用 Clipboard API 复制成功');
                     return;
                 } catch (err) {
-                    console.warn('Clipboard API 失败，尝试备用方案:', err);
+                    // 静默失败，尝试备用方案
                 }
             }
 
@@ -148,10 +140,8 @@ const ChatGPTModule = {
                 textarea.setSelectionRange(0, text.length);
                 const successful = document.execCommand('copy');
 
-                if (successful) {
-                    console.log('✅ 使用 execCommand 复制成功');
-                } else {
-                    throw new Error('execCommand 复制失败');
+                if (!successful) {
+                    throw new Error('复制失败');
                 }
             } finally {
                 document.body.removeChild(textarea);
@@ -871,7 +861,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.7.5',
+                    version: '1.7.6',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
