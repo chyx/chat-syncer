@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.8.1
+// @version      1.8.2
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.8.1';
+    const SCRIPT_VERSION = '1.8.2';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -273,11 +273,52 @@ const UIHelpers = {
     },
 
     /**
+     * Make a button hidden and show on hover
+     * @param {HTMLElement} button - Button element to make hoverable
+     */
+    makeButtonHoverable(button) {
+        button.style.position = 'relative';
+        button.style.opacity = '0';
+        button.style.visibility = 'hidden';
+        button.style.maxHeight = '0';
+        button.style.overflow = 'hidden';
+    },
+
+    /**
+     * Setup hover behavior for buttons in container
+     * @param {HTMLElement} container - Container element
+     * @param {HTMLElement[]} hoverButtons - Array of buttons to show on hover
+     */
+    setupHoverBehavior(container, hoverButtons) {
+        if (!container || !hoverButtons || hoverButtons.length === 0) return;
+
+        let hoverTimer;
+
+        container.addEventListener('mouseenter', () => {
+            hoverTimer = setTimeout(() => {
+                hoverButtons.forEach(button => {
+                    button.style.opacity = '1';
+                    button.style.visibility = 'visible';
+                    button.style.maxHeight = '100px';
+                });
+            }, 300);
+        });
+
+        container.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimer);
+            hoverButtons.forEach(button => {
+                button.style.opacity = '0';
+                button.style.visibility = 'hidden';
+                button.style.maxHeight = '0';
+            });
+        });
+    },
+
+    /**
      * Create update script button (visible on hover)
-     * @param {HTMLElement} container - Parent container to attach hover listener
      * @returns {HTMLButtonElement} The update button
      */
-    createUpdateScriptButton(container) {
+    createUpdateScriptButton() {
         // Get current version (injected during build)
         const version = typeof SCRIPT_VERSION !== 'undefined' ? SCRIPT_VERSION : 'unknown';
 
@@ -291,38 +332,7 @@ const UIHelpers = {
             id: 'update-script-button'
         });
 
-        // Override position to relative for container usage
-        updateButton.style.position = 'relative';
-
-        // Initially hidden
-        updateButton.style.opacity = '0';
-        updateButton.style.visibility = 'hidden';
-        updateButton.style.maxHeight = '0';
-        updateButton.style.overflow = 'hidden';
-        updateButton.style.marginTop = '0';
-
-        // Show on container hover
-        if (container) {
-            let hoverTimer;
-
-            container.addEventListener('mouseenter', () => {
-                hoverTimer = setTimeout(() => {
-                    updateButton.style.opacity = '1';
-                    updateButton.style.visibility = 'visible';
-                    updateButton.style.maxHeight = '100px';
-                    updateButton.style.marginTop = '12px';
-                }, 300); // 300ms delay
-            });
-
-            container.addEventListener('mouseleave', () => {
-                clearTimeout(hoverTimer);
-                updateButton.style.opacity = '0';
-                updateButton.style.visibility = 'hidden';
-                updateButton.style.maxHeight = '0';
-                updateButton.style.marginTop = '0';
-            });
-        }
-
+        this.makeButtonHoverable(updateButton);
         return updateButton;
     },
 
@@ -528,43 +538,19 @@ const ChatGPTModule = {
                 position: {},
                 color: 'green'
             });
-            customButton.style.position = 'relative';
             customButton.style.minWidth = '180px';
             customButton.style.textAlign = 'center';
             customButton.style.fontWeight = '600';
-            customButton.style.opacity = '0';
-            customButton.style.visibility = 'hidden';
-            customButton.style.maxHeight = '0';
-            customButton.style.overflow = 'hidden';
+            UIHelpers.makeButtonHoverable(customButton);
 
             // 更新脚本按钮（hover显示）
-            const updateButton = UIHelpers.createUpdateScriptButton(container);
+            const updateButton = UIHelpers.createUpdateScriptButton();
             updateButton.style.minWidth = '180px';
             updateButton.style.textAlign = 'center';
             updateButton.style.fontWeight = '600';
 
-            // Hover 显示/隐藏额外按钮
-            let hoverTimer;
-            container.addEventListener('mouseenter', () => {
-                hoverTimer = setTimeout(() => {
-                    customButton.style.opacity = '1';
-                    customButton.style.visibility = 'visible';
-                    customButton.style.maxHeight = '100px';
-                    updateButton.style.opacity = '1';
-                    updateButton.style.visibility = 'visible';
-                    updateButton.style.maxHeight = '100px';
-                }, 300);
-            });
-
-            container.addEventListener('mouseleave', () => {
-                clearTimeout(hoverTimer);
-                customButton.style.opacity = '0';
-                customButton.style.visibility = 'hidden';
-                customButton.style.maxHeight = '0';
-                updateButton.style.opacity = '0';
-                updateButton.style.visibility = 'hidden';
-                updateButton.style.maxHeight = '0';
-            });
+            // Setup hover behavior for all hoverable buttons
+            UIHelpers.setupHoverBehavior(container, [customButton, updateButton]);
 
             // 因为使用 column-reverse，按正常顺序添加即可（最后添加的会显示在最下面）
             container.appendChild(quickButton);
@@ -573,7 +559,7 @@ const ChatGPTModule = {
             return container;
         },
 
-        createPasteButton(container) {
+        createPasteButton() {
             const button = UIHelpers.createButton({
                 text: '📥 获取远程内容',
                 onClick: async () => {
@@ -583,16 +569,10 @@ const ChatGPTModule = {
                 color: 'blue'
             });
             button.id = 'paste-button';
-            button.style.position = 'relative';
             button.style.minWidth = '180px';
             button.style.textAlign = 'center';
             button.style.fontWeight = '600';
-
-            // 默认收起
-            button.style.opacity = '0';
-            button.style.visibility = 'hidden';
-            button.style.maxHeight = '0';
-            button.style.overflow = 'hidden';
+            UIHelpers.makeButtonHoverable(button);
 
             return button;
         },
@@ -1371,7 +1351,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.1',
+                    version: '1.8.2',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -2289,41 +2269,20 @@ const PageUploaderModule = {
         // Create paste button (from ChatGPTModule, if available)
         let pasteButton = null;
         if (typeof ChatGPTModule !== 'undefined' && ChatGPTModule.UI && ChatGPTModule.UI.createPasteButton) {
-            pasteButton = ChatGPTModule.UI.createPasteButton(container);
+            pasteButton = ChatGPTModule.UI.createPasteButton();
         }
 
         // Create update script button
-        const updateButton = UIHelpers.createUpdateScriptButton(container);
-        updateButton.style.position = 'relative';
-        updateButton.style.bottom = 'auto';
-        updateButton.style.right = 'auto';
+        const updateButton = UIHelpers.createUpdateScriptButton();
 
-        // Hover 显示/隐藏额外按钮
-        let hoverTimer;
-        container.addEventListener('mouseenter', () => {
-            hoverTimer = setTimeout(() => {
-                if (pasteButton) {
-                    pasteButton.style.opacity = '1';
-                    pasteButton.style.visibility = 'visible';
-                    pasteButton.style.maxHeight = '100px';
-                }
-                updateButton.style.opacity = '1';
-                updateButton.style.visibility = 'visible';
-                updateButton.style.maxHeight = '100px';
-            }, 300);
-        });
+        // Collect all hoverable buttons
+        const hoverButtons = [updateButton];
+        if (pasteButton) {
+            hoverButtons.push(pasteButton);
+        }
 
-        container.addEventListener('mouseleave', () => {
-            clearTimeout(hoverTimer);
-            if (pasteButton) {
-                pasteButton.style.opacity = '0';
-                pasteButton.style.visibility = 'hidden';
-                pasteButton.style.maxHeight = '0';
-            }
-            updateButton.style.opacity = '0';
-            updateButton.style.visibility = 'hidden';
-            updateButton.style.maxHeight = '0';
-        });
+        // Setup hover behavior
+        UIHelpers.setupHoverBehavior(container, hoverButtons);
 
         container.appendChild(uploadButton);
         if (pasteButton) {

@@ -29,43 +29,19 @@ const ChatGPTModule = {
                 position: {},
                 color: 'green'
             });
-            customButton.style.position = 'relative';
             customButton.style.minWidth = '180px';
             customButton.style.textAlign = 'center';
             customButton.style.fontWeight = '600';
-            customButton.style.opacity = '0';
-            customButton.style.visibility = 'hidden';
-            customButton.style.maxHeight = '0';
-            customButton.style.overflow = 'hidden';
+            UIHelpers.makeButtonHoverable(customButton);
 
             // 更新脚本按钮（hover显示）
-            const updateButton = UIHelpers.createUpdateScriptButton(container);
+            const updateButton = UIHelpers.createUpdateScriptButton();
             updateButton.style.minWidth = '180px';
             updateButton.style.textAlign = 'center';
             updateButton.style.fontWeight = '600';
 
-            // Hover 显示/隐藏额外按钮
-            let hoverTimer;
-            container.addEventListener('mouseenter', () => {
-                hoverTimer = setTimeout(() => {
-                    customButton.style.opacity = '1';
-                    customButton.style.visibility = 'visible';
-                    customButton.style.maxHeight = '100px';
-                    updateButton.style.opacity = '1';
-                    updateButton.style.visibility = 'visible';
-                    updateButton.style.maxHeight = '100px';
-                }, 300);
-            });
-
-            container.addEventListener('mouseleave', () => {
-                clearTimeout(hoverTimer);
-                customButton.style.opacity = '0';
-                customButton.style.visibility = 'hidden';
-                customButton.style.maxHeight = '0';
-                updateButton.style.opacity = '0';
-                updateButton.style.visibility = 'hidden';
-                updateButton.style.maxHeight = '0';
-            });
+            // Setup hover behavior for all hoverable buttons
+            UIHelpers.setupHoverBehavior(container, [customButton, updateButton]);
 
             // 因为使用 column-reverse，按正常顺序添加即可（最后添加的会显示在最下面）
             container.appendChild(quickButton);
@@ -74,7 +50,7 @@ const ChatGPTModule = {
             return container;
         },
 
-        createPasteButton(container) {
+        createPasteButton() {
             const button = UIHelpers.createButton({
                 text: '📥 获取远程内容',
                 onClick: async () => {
@@ -84,16 +60,10 @@ const ChatGPTModule = {
                 color: 'blue'
             });
             button.id = 'paste-button';
-            button.style.position = 'relative';
             button.style.minWidth = '180px';
             button.style.textAlign = 'center';
             button.style.fontWeight = '600';
-
-            // 默认收起
-            button.style.opacity = '0';
-            button.style.visibility = 'hidden';
-            button.style.maxHeight = '0';
-            button.style.overflow = 'hidden';
+            UIHelpers.makeButtonHoverable(button);
 
             return button;
         },
@@ -872,7 +842,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.1',
+                    version: '1.8.2',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time

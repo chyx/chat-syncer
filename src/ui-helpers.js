@@ -95,11 +95,52 @@ const UIHelpers = {
     },
 
     /**
+     * Make a button hidden and show on hover
+     * @param {HTMLElement} button - Button element to make hoverable
+     */
+    makeButtonHoverable(button) {
+        button.style.position = 'relative';
+        button.style.opacity = '0';
+        button.style.visibility = 'hidden';
+        button.style.maxHeight = '0';
+        button.style.overflow = 'hidden';
+    },
+
+    /**
+     * Setup hover behavior for buttons in container
+     * @param {HTMLElement} container - Container element
+     * @param {HTMLElement[]} hoverButtons - Array of buttons to show on hover
+     */
+    setupHoverBehavior(container, hoverButtons) {
+        if (!container || !hoverButtons || hoverButtons.length === 0) return;
+
+        let hoverTimer;
+
+        container.addEventListener('mouseenter', () => {
+            hoverTimer = setTimeout(() => {
+                hoverButtons.forEach(button => {
+                    button.style.opacity = '1';
+                    button.style.visibility = 'visible';
+                    button.style.maxHeight = '100px';
+                });
+            }, 300);
+        });
+
+        container.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimer);
+            hoverButtons.forEach(button => {
+                button.style.opacity = '0';
+                button.style.visibility = 'hidden';
+                button.style.maxHeight = '0';
+            });
+        });
+    },
+
+    /**
      * Create update script button (visible on hover)
-     * @param {HTMLElement} container - Parent container to attach hover listener
      * @returns {HTMLButtonElement} The update button
      */
-    createUpdateScriptButton(container) {
+    createUpdateScriptButton() {
         // Get current version (injected during build)
         const version = typeof SCRIPT_VERSION !== 'undefined' ? SCRIPT_VERSION : 'unknown';
 
@@ -113,38 +154,7 @@ const UIHelpers = {
             id: 'update-script-button'
         });
 
-        // Override position to relative for container usage
-        updateButton.style.position = 'relative';
-
-        // Initially hidden
-        updateButton.style.opacity = '0';
-        updateButton.style.visibility = 'hidden';
-        updateButton.style.maxHeight = '0';
-        updateButton.style.overflow = 'hidden';
-        updateButton.style.marginTop = '0';
-
-        // Show on container hover
-        if (container) {
-            let hoverTimer;
-
-            container.addEventListener('mouseenter', () => {
-                hoverTimer = setTimeout(() => {
-                    updateButton.style.opacity = '1';
-                    updateButton.style.visibility = 'visible';
-                    updateButton.style.maxHeight = '100px';
-                    updateButton.style.marginTop = '12px';
-                }, 300); // 300ms delay
-            });
-
-            container.addEventListener('mouseleave', () => {
-                clearTimeout(hoverTimer);
-                updateButton.style.opacity = '0';
-                updateButton.style.visibility = 'hidden';
-                updateButton.style.maxHeight = '0';
-                updateButton.style.marginTop = '0';
-            });
-        }
-
+        this.makeButtonHoverable(updateButton);
         return updateButton;
     },
 

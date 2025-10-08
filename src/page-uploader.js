@@ -444,41 +444,20 @@ const PageUploaderModule = {
         // Create paste button (from ChatGPTModule, if available)
         let pasteButton = null;
         if (typeof ChatGPTModule !== 'undefined' && ChatGPTModule.UI && ChatGPTModule.UI.createPasteButton) {
-            pasteButton = ChatGPTModule.UI.createPasteButton(container);
+            pasteButton = ChatGPTModule.UI.createPasteButton();
         }
 
         // Create update script button
-        const updateButton = UIHelpers.createUpdateScriptButton(container);
-        updateButton.style.position = 'relative';
-        updateButton.style.bottom = 'auto';
-        updateButton.style.right = 'auto';
+        const updateButton = UIHelpers.createUpdateScriptButton();
 
-        // Hover 显示/隐藏额外按钮
-        let hoverTimer;
-        container.addEventListener('mouseenter', () => {
-            hoverTimer = setTimeout(() => {
-                if (pasteButton) {
-                    pasteButton.style.opacity = '1';
-                    pasteButton.style.visibility = 'visible';
-                    pasteButton.style.maxHeight = '100px';
-                }
-                updateButton.style.opacity = '1';
-                updateButton.style.visibility = 'visible';
-                updateButton.style.maxHeight = '100px';
-            }, 300);
-        });
+        // Collect all hoverable buttons
+        const hoverButtons = [updateButton];
+        if (pasteButton) {
+            hoverButtons.push(pasteButton);
+        }
 
-        container.addEventListener('mouseleave', () => {
-            clearTimeout(hoverTimer);
-            if (pasteButton) {
-                pasteButton.style.opacity = '0';
-                pasteButton.style.visibility = 'hidden';
-                pasteButton.style.maxHeight = '0';
-            }
-            updateButton.style.opacity = '0';
-            updateButton.style.visibility = 'hidden';
-            updateButton.style.maxHeight = '0';
-        });
+        // Setup hover behavior
+        UIHelpers.setupHoverBehavior(container, hoverButtons);
 
         container.appendChild(uploadButton);
         if (pasteButton) {
