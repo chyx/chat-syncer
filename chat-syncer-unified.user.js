@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.8.2
+// @version      1.8.3
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.8.2';
+    const SCRIPT_VERSION = '1.8.3';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -1351,7 +1351,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.2',
+                    version: '1.8.3',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1569,17 +1569,14 @@ const SupabaseModule = {
                 position: {},
                 color: 'green'
             });
-
             configButton.style.position = 'relative';
-            configButton.style.top = 'auto';
-            configButton.style.right = 'auto';
             configButton.style.maxWidth = '200px';
 
-            // Create update script button
-            const updateButton = UIHelpers.createUpdateScriptButton(container);
-            updateButton.style.position = 'relative';
-            updateButton.style.top = 'auto';
-            updateButton.style.right = 'auto';
+            // Create update script button (hover to show)
+            const updateButton = UIHelpers.createUpdateScriptButton();
+
+            // Setup hover behavior
+            UIHelpers.setupHoverBehavior(container, [updateButton]);
 
             container.appendChild(configButton);
             container.appendChild(updateButton);

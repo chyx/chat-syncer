@@ -51,17 +51,14 @@ const SupabaseModule = {
                 position: {},
                 color: 'green'
             });
-
             configButton.style.position = 'relative';
-            configButton.style.top = 'auto';
-            configButton.style.right = 'auto';
             configButton.style.maxWidth = '200px';
 
-            // Create update script button
-            const updateButton = UIHelpers.createUpdateScriptButton(container);
-            updateButton.style.position = 'relative';
-            updateButton.style.top = 'auto';
-            updateButton.style.right = 'auto';
+            // Create update script button (hover to show)
+            const updateButton = UIHelpers.createUpdateScriptButton();
+
+            // Setup hover behavior
+            UIHelpers.setupHoverBehavior(container, [updateButton]);
 
             container.appendChild(configButton);
             container.appendChild(updateButton);
