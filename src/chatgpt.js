@@ -5,11 +5,7 @@
 const ChatGPTModule = {
     // UI Components
     UI: {
-        createBatchSyncButton() {
-            // Create container for buttons
-            const container = UIHelpers.createButtonContainer({ bottom: '80px', right: '20px' });
-            container.id = 'batch-sync-container';
-
+        addButtonsToContainer(container) {
             // 主按钮：批量同步最近20条（主页和对话页统一）
             const quickButton = UIHelpers.createButton({
                 text: '📚 批量同步最近20条',
@@ -34,20 +30,11 @@ const ChatGPTModule = {
             customButton.style.fontWeight = '600';
             UIHelpers.makeButtonHoverable(customButton);
 
-            // 更新脚本按钮（hover显示）
-            const updateButton = UIHelpers.createUpdateScriptButton();
-            updateButton.style.minWidth = '180px';
-            updateButton.style.textAlign = 'center';
-            updateButton.style.fontWeight = '600';
-
-            // Setup hover behavior for all hoverable buttons
-            UIHelpers.setupHoverBehavior(container, [customButton, updateButton]);
-
             // 因为使用 column-reverse，按正常顺序添加即可（最后添加的会显示在最下面）
             container.appendChild(quickButton);
             container.appendChild(customButton);
-            container.appendChild(updateButton);
-            return container;
+
+            return [customButton]; // Return hoverable buttons
         },
 
         createPasteButton() {
@@ -842,7 +829,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.6',
+                    version: '1.9.0',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -969,14 +956,12 @@ const ChatGPTModule = {
     },
 
     // Initialize ChatGPT functionality
-    init() {
+    init(container) {
         console.log('ChatGPT Module initializing...');
-        console.log('Document ready state:', document.readyState);
-        console.log('Current URL:', location.href);
 
         // Wait for page to load
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
+            document.addEventListener('DOMContentLoaded', () => this.init(container));
             return;
         }
 
@@ -987,21 +972,14 @@ const ChatGPTModule = {
         console.log('Detected page type:', pageType);
 
         if (pageType === 'chatgpt_home' || pageType === 'chatgpt_conversation') {
-            // 主页和对话页都显示批量同步按钮
-            console.log('Creating batch sync button...');
-            const batchSyncButton = this.UI.createBatchSyncButton();
-            console.log('Batch sync button created:', batchSyncButton);
-            console.log('Appending to body...');
-            document.body.appendChild(batchSyncButton);
+            // Add ChatGPT-specific buttons to the unified container
+            console.log('Adding ChatGPT buttons to container...');
+            const hoverButtons = this.UI.addButtonsToContainer(container);
 
-            if (pageType === 'chatgpt_conversation') {
-                console.log('✅ ChatGPT 对话页批量同步功能已加载');
-            } else {
-                console.log('✅ ChatGPT 主页批量同步功能已加载');
-            }
-            console.log('Button in DOM:', document.getElementById('batch-sync-container'));
-        } else {
-            console.log('⚠️ Page type not recognized, no button will be added');
+            // Return hoverable buttons for unified hover management
+            return hoverButtons;
         }
+
+        return [];
     }
 };

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.8.6
+// @version      1.9.0
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.8.6';
+    const SCRIPT_VERSION = '1.9.0';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -336,6 +336,24 @@ const UIHelpers = {
         return updateButton;
     },
 
+    // Singleton button container for the current page
+    _pageButtonContainer: null,
+
+    /**
+     * Get or create the unified button container for the current page
+     * @param {Object} position - Position object {bottom, right, top, left}
+     * @returns {HTMLDivElement} The container element
+     */
+    getPageButtonContainer(position = { bottom: '20px', right: '20px' }) {
+        // Return existing container if already created
+        if (this._pageButtonContainer) {
+            return this._pageButtonContainer;
+        }
+
+        // Create new container
+        return this.createButtonContainer(position);
+    },
+
     /**
      * Create a button container that can hold multiple buttons
      * @param {Object} position - Position object {bottom, right, top, left}
@@ -502,6 +520,9 @@ const UIHelpers = {
         container.appendChild(dragHandle);
         container.appendChild(closeButton);
 
+        // Store as the page's singleton container
+        this._pageButtonContainer = container;
+
         return container;
     }
 };
@@ -514,11 +535,7 @@ const UIHelpers = {
 const ChatGPTModule = {
     // UI Components
     UI: {
-        createBatchSyncButton() {
-            // Create container for buttons
-            const container = UIHelpers.createButtonContainer({ bottom: '80px', right: '20px' });
-            container.id = 'batch-sync-container';
-
+        addButtonsToContainer(container) {
             // 主按钮：批量同步最近20条（主页和对话页统一）
             const quickButton = UIHelpers.createButton({
                 text: '📚 批量同步最近20条',
@@ -543,20 +560,11 @@ const ChatGPTModule = {
             customButton.style.fontWeight = '600';
             UIHelpers.makeButtonHoverable(customButton);
 
-            // 更新脚本按钮（hover显示）
-            const updateButton = UIHelpers.createUpdateScriptButton();
-            updateButton.style.minWidth = '180px';
-            updateButton.style.textAlign = 'center';
-            updateButton.style.fontWeight = '600';
-
-            // Setup hover behavior for all hoverable buttons
-            UIHelpers.setupHoverBehavior(container, [customButton, updateButton]);
-
             // 因为使用 column-reverse，按正常顺序添加即可（最后添加的会显示在最下面）
             container.appendChild(quickButton);
             container.appendChild(customButton);
-            container.appendChild(updateButton);
-            return container;
+
+            return [customButton]; // Return hoverable buttons
         },
 
         createPasteButton() {
@@ -1351,7 +1359,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.6',
+                    version: '1.9.0',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1478,14 +1486,12 @@ const ChatGPTModule = {
     },
 
     // Initialize ChatGPT functionality
-    init() {
+    init(container) {
         console.log('ChatGPT Module initializing...');
-        console.log('Document ready state:', document.readyState);
-        console.log('Current URL:', location.href);
 
         // Wait for page to load
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.init());
+            document.addEventListener('DOMContentLoaded', () => this.init(container));
             return;
         }
 
@@ -1496,22 +1502,15 @@ const ChatGPTModule = {
         console.log('Detected page type:', pageType);
 
         if (pageType === 'chatgpt_home' || pageType === 'chatgpt_conversation') {
-            // 主页和对话页都显示批量同步按钮
-            console.log('Creating batch sync button...');
-            const batchSyncButton = this.UI.createBatchSyncButton();
-            console.log('Batch sync button created:', batchSyncButton);
-            console.log('Appending to body...');
-            document.body.appendChild(batchSyncButton);
+            // Add ChatGPT-specific buttons to the unified container
+            console.log('Adding ChatGPT buttons to container...');
+            const hoverButtons = this.UI.addButtonsToContainer(container);
 
-            if (pageType === 'chatgpt_conversation') {
-                console.log('✅ ChatGPT 对话页批量同步功能已加载');
-            } else {
-                console.log('✅ ChatGPT 主页批量同步功能已加载');
-            }
-            console.log('Button in DOM:', document.getElementById('batch-sync-container'));
-        } else {
-            console.log('⚠️ Page type not recognized, no button will be added');
+            // Return hoverable buttons for unified hover management
+            return hoverButtons;
         }
+
+        return [];
     }
 };
 
@@ -2259,11 +2258,8 @@ const PageUploaderModule = {
         }
     },
 
-    // Create upload button in bottom-right corner
-    async createUploadButton() {
-        // Create container for buttons
-        const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
-        container.id = 'page-upload-button-container';
+    // Add upload button to the provided container
+    async addButtonsToContainer(container) {
 
         // Create upload button
         const uploadButton = UIHelpers.createButton({
@@ -2307,26 +2303,18 @@ const PageUploaderModule = {
             pasteButton = ChatGPTModule.UI.createPasteButton();
         }
 
-        // Create update script button
-        const updateButton = UIHelpers.createUpdateScriptButton();
-
-        // Collect all hoverable buttons
-        const hoverButtons = [updateButton];
+        // Collect all hoverable buttons for return
+        const hoverButtons = [];
         if (pasteButton) {
             hoverButtons.push(pasteButton);
         }
-
-        // Setup hover behavior
-        UIHelpers.setupHoverBehavior(container, hoverButtons);
 
         container.appendChild(uploadButton);
         if (pasteButton) {
             container.appendChild(pasteButton);
         }
-        container.appendChild(updateButton);
-        document.body.appendChild(container);
 
-        return container;
+        return hoverButtons; // Return hoverable buttons
     },
 
     // Toggle upload button visibility (per-domain)
@@ -2426,7 +2414,7 @@ const PageUploaderModule = {
     },
 
     // Initialize the page uploader
-    init() {
+    async init(container) {
         // Register Tampermonkey menu command to toggle button
         if (typeof GM_registerMenuCommand !== 'undefined') {
             GM_registerMenuCommand('Toggle Upload Button', () => {
@@ -2440,28 +2428,38 @@ const PageUploaderModule = {
         const isVisible = GM_getValue(storageKey, true);
         const domain = this.getCurrentDomain();
 
-        if (isVisible) {
-            // Wait for DOM to be ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    this.createUploadButton();
-                });
-            } else {
-                this.createUploadButton();
-            }
+        console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);
 
-            // Monitor URL changes and update upload time display
-            let lastUrl = window.location.href;
-            setInterval(() => {
-                const currentUrl = window.location.href;
-                if (currentUrl !== lastUrl) {
-                    lastUrl = currentUrl;
-                    this.updateUploadTimeDisplay();
-                }
-            }, 1000);
+        if (!isVisible) {
+            return []; // No buttons to add
         }
 
-        console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            return new Promise((resolve) => {
+                document.addEventListener('DOMContentLoaded', async () => {
+                    const hoverButtons = await this.addButtonsToContainer(container);
+                    this.startMonitoring();
+                    resolve(hoverButtons);
+                });
+            });
+        } else {
+            const hoverButtons = await this.addButtonsToContainer(container);
+            this.startMonitoring();
+            return hoverButtons;
+        }
+    },
+
+    // Monitor URL changes and update upload time display
+    startMonitoring() {
+        let lastUrl = window.location.href;
+        setInterval(() => {
+            const currentUrl = window.location.href;
+            if (currentUrl !== lastUrl) {
+                lastUrl = currentUrl;
+                this.updateUploadTimeDisplay();
+            }
+        }, 1000);
     }
 };
 
@@ -2470,29 +2468,56 @@ const PageUploaderModule = {
 // UNIFIED INITIALIZATION
 // ===============================
 
-function initialize() {
+async function initialize() {
     console.log('ChatGPT Supabase Syncer (Unified) 开始初始化...');
     console.log('当前页面:', location.href);
     console.log('页面类型:', PageDetector.getCurrentPageType());
 
     const pageType = PageDetector.getCurrentPageType();
 
-    // Initialize page-specific modules
+    // Create unified button container for this page
+    const container = UIHelpers.getPageButtonContainer({ bottom: '20px', right: '20px' });
+    const allHoverButtons = [];
+
+    // Initialize page-specific modules and collect hover buttons
     switch (pageType) {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
-            ChatGPTModule.init();
-            PageUploaderModule.init();
+            // Add ChatGPT-specific buttons
+            const chatgptButtons = ChatGPTModule.init(container);
+            if (chatgptButtons) allHoverButtons.push(...chatgptButtons);
+
+            // Add PageUploader buttons
+            const uploaderButtons = await PageUploaderModule.init(container);
+            if (uploaderButtons) allHoverButtons.push(...uploaderButtons);
             break;
+
         case 'supabase':
-            // Supabase module includes its own unified button container
-            // with upload page functionality built-in
+            // Supabase module has its own implementation (for now)
             SupabaseModule.init();
-            break;
+            return; // Don't use unified container
+
         default:
             console.log('通用页面');
-            PageUploaderModule.init();
+            // Only PageUploader buttons
+            const defaultButtons = await PageUploaderModule.init(container);
+            if (defaultButtons) allHoverButtons.push(...defaultButtons);
     }
+
+    // Add Update Script button (common to all pages)
+    const updateButton = UIHelpers.createUpdateScriptButton();
+    updateButton.style.minWidth = '180px';
+    updateButton.style.textAlign = 'center';
+    updateButton.style.fontWeight = '600';
+    container.appendChild(updateButton);
+    allHoverButtons.push(updateButton);
+
+    // Setup unified hover behavior
+    UIHelpers.setupHoverBehavior(container, allHoverButtons);
+
+    // Append container to body
+    document.body.appendChild(container);
+    console.log('✅ Unified button container initialized');
 }
 
 // Start initialization

@@ -158,6 +158,24 @@ const UIHelpers = {
         return updateButton;
     },
 
+    // Singleton button container for the current page
+    _pageButtonContainer: null,
+
+    /**
+     * Get or create the unified button container for the current page
+     * @param {Object} position - Position object {bottom, right, top, left}
+     * @returns {HTMLDivElement} The container element
+     */
+    getPageButtonContainer(position = { bottom: '20px', right: '20px' }) {
+        // Return existing container if already created
+        if (this._pageButtonContainer) {
+            return this._pageButtonContainer;
+        }
+
+        // Create new container
+        return this.createButtonContainer(position);
+    },
+
     /**
      * Create a button container that can hold multiple buttons
      * @param {Object} position - Position object {bottom, right, top, left}
@@ -323,6 +341,9 @@ const UIHelpers = {
 
         container.appendChild(dragHandle);
         container.appendChild(closeButton);
+
+        // Store as the page's singleton container
+        this._pageButtonContainer = container;
 
         return container;
     }

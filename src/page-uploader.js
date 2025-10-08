@@ -399,11 +399,8 @@ const PageUploaderModule = {
         }
     },
 
-    // Create upload button in bottom-right corner
-    async createUploadButton() {
-        // Create container for buttons
-        const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
-        container.id = 'page-upload-button-container';
+    // Add upload button to the provided container
+    async addButtonsToContainer(container) {
 
         // Create upload button
         const uploadButton = UIHelpers.createButton({
@@ -447,26 +444,18 @@ const PageUploaderModule = {
             pasteButton = ChatGPTModule.UI.createPasteButton();
         }
 
-        // Create update script button
-        const updateButton = UIHelpers.createUpdateScriptButton();
-
-        // Collect all hoverable buttons
-        const hoverButtons = [updateButton];
+        // Collect all hoverable buttons for return
+        const hoverButtons = [];
         if (pasteButton) {
             hoverButtons.push(pasteButton);
         }
-
-        // Setup hover behavior
-        UIHelpers.setupHoverBehavior(container, hoverButtons);
 
         container.appendChild(uploadButton);
         if (pasteButton) {
             container.appendChild(pasteButton);
         }
-        container.appendChild(updateButton);
-        document.body.appendChild(container);
 
-        return container;
+        return hoverButtons; // Return hoverable buttons
     },
 
     // Toggle upload button visibility (per-domain)
@@ -566,7 +555,7 @@ const PageUploaderModule = {
     },
 
     // Initialize the page uploader
-    init() {
+    async init(container) {
         // Register Tampermonkey menu command to toggle button
         if (typeof GM_registerMenuCommand !== 'undefined') {
             GM_registerMenuCommand('Toggle Upload Button', () => {
@@ -580,27 +569,37 @@ const PageUploaderModule = {
         const isVisible = GM_getValue(storageKey, true);
         const domain = this.getCurrentDomain();
 
-        if (isVisible) {
-            // Wait for DOM to be ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    this.createUploadButton();
-                });
-            } else {
-                this.createUploadButton();
-            }
+        console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);
 
-            // Monitor URL changes and update upload time display
-            let lastUrl = window.location.href;
-            setInterval(() => {
-                const currentUrl = window.location.href;
-                if (currentUrl !== lastUrl) {
-                    lastUrl = currentUrl;
-                    this.updateUploadTimeDisplay();
-                }
-            }, 1000);
+        if (!isVisible) {
+            return []; // No buttons to add
         }
 
-        console.log(`Page Uploader Module initialized for ${domain} (button: ${isVisible ? 'ON' : 'OFF'})`);
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            return new Promise((resolve) => {
+                document.addEventListener('DOMContentLoaded', async () => {
+                    const hoverButtons = await this.addButtonsToContainer(container);
+                    this.startMonitoring();
+                    resolve(hoverButtons);
+                });
+            });
+        } else {
+            const hoverButtons = await this.addButtonsToContainer(container);
+            this.startMonitoring();
+            return hoverButtons;
+        }
+    },
+
+    // Monitor URL changes and update upload time display
+    startMonitoring() {
+        let lastUrl = window.location.href;
+        setInterval(() => {
+            const currentUrl = window.location.href;
+            if (currentUrl !== lastUrl) {
+                lastUrl = currentUrl;
+                this.updateUploadTimeDisplay();
+            }
+        }, 1000);
     }
 };
