@@ -341,6 +341,53 @@ const UIHelpers = {
             flex-direction: column-reverse;
             gap: 12px;
         `;
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '×';
+        closeButton.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: white;
+            border: 2px solid white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+        `;
+        closeButton.onclick = () => {
+            container.remove();
+        };
+
+        // Show close button on hover
+        container.addEventListener('mouseenter', () => {
+            setTimeout(() => {
+                closeButton.style.opacity = '1';
+                closeButton.style.visibility = 'visible';
+            }, 300);
+        });
+
+        container.addEventListener('mouseleave', () => {
+            closeButton.style.opacity = '0';
+            closeButton.style.visibility = 'hidden';
+        });
+
+        container.appendChild(closeButton);
+
         return container;
     }
 };
@@ -357,38 +404,6 @@ const ChatGPTModule = {
             // Create container for buttons
             const container = UIHelpers.createButtonContainer({ bottom: '80px', right: '20px' });
             container.id = 'batch-sync-container';
-
-            // 添加X按钮
-            const closeButton = document.createElement('button');
-            closeButton.textContent = '×';
-            closeButton.style.cssText = `
-                position: absolute;
-                top: -8px;
-                right: -8px;
-                width: 24px;
-                height: 24px;
-                border-radius: 50%;
-                background: #ff4444;
-                color: white;
-                border: 2px solid white;
-                font-size: 18px;
-                font-weight: bold;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 0;
-                line-height: 1;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                z-index: 10;
-                opacity: 0;
-                visibility: hidden;
-                transition: opacity 0.2s, visibility 0.2s;
-            `;
-            closeButton.onclick = () => {
-                container.remove();
-            };
-            container.appendChild(closeButton);
 
             // 主按钮：批量同步最近20条（主页和对话页统一）
             const quickButton = UIHelpers.createButton({
@@ -424,7 +439,7 @@ const ChatGPTModule = {
             updateButton.style.textAlign = 'center';
             updateButton.style.fontWeight = '600';
 
-            // Hover 显示/隐藏额外按钮和X按钮
+            // Hover 显示/隐藏额外按钮
             let hoverTimer;
             container.addEventListener('mouseenter', () => {
                 hoverTimer = setTimeout(() => {
@@ -434,8 +449,6 @@ const ChatGPTModule = {
                     updateButton.style.opacity = '1';
                     updateButton.style.visibility = 'visible';
                     updateButton.style.maxHeight = '100px';
-                    closeButton.style.opacity = '1';
-                    closeButton.style.visibility = 'visible';
                 }, 300);
             });
 
@@ -447,8 +460,6 @@ const ChatGPTModule = {
                 updateButton.style.opacity = '0';
                 updateButton.style.visibility = 'hidden';
                 updateButton.style.maxHeight = '0';
-                closeButton.style.opacity = '0';
-                closeButton.style.visibility = 'hidden';
             });
 
             // 因为使用 column-reverse，按正常顺序添加即可（最后添加的会显示在最下面）

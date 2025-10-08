@@ -163,6 +163,53 @@ const UIHelpers = {
             flex-direction: column-reverse;
             gap: 12px;
         `;
+
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '×';
+        closeButton.style.cssText = `
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: white;
+            border: 2px solid white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+        `;
+        closeButton.onclick = () => {
+            container.remove();
+        };
+
+        // Show close button on hover
+        container.addEventListener('mouseenter', () => {
+            setTimeout(() => {
+                closeButton.style.opacity = '1';
+                closeButton.style.visibility = 'visible';
+            }, 300);
+        });
+
+        container.addEventListener('mouseleave', () => {
+            closeButton.style.opacity = '0';
+            closeButton.style.visibility = 'hidden';
+        });
+
+        container.appendChild(closeButton);
+
         return container;
     }
 };
