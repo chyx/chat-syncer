@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.7.8
+// @version      1.7.9
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.7.8';
+    const SCRIPT_VERSION = '1.7.9';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -471,7 +471,7 @@ const ChatGPTModule = {
 
         createPasteButton(container) {
             const button = UIHelpers.createButton({
-                text: '📋 粘贴',
+                text: '📥 获取远程内容',
                 onClick: async () => {
                     await this.handlePaste();
                 },
@@ -495,51 +495,62 @@ const ChatGPTModule = {
 
         async handlePaste() {
             try {
+                this.showStatus('正在获取远程内容...', 'info');
+
                 const clipboardContent = await this.fetchClipboardContent();
 
                 if (!clipboardContent) {
-                    this.showStatus('剪贴板内容为空', 'error');
+                    this.showStatus('远程内容为空', 'error');
                     return;
                 }
 
-                await this.copyToSystemClipboard(clipboardContent);
-                this.showStatus('✅ 已复制到剪贴板，可按 Ctrl+V 粘贴', 'success');
+                // 查找ChatGPT输入框并填入内容
+                const inputBox = this.findChatInputBox();
+                if (!inputBox) {
+                    this.showStatus('未找到输入框', 'error');
+                    return;
+                }
+
+                // 填入内容
+                this.insertTextToInput(inputBox, clipboardContent);
+                this.showStatus('✅ 远程内容已粘贴到输入框', 'success');
 
             } catch (error) {
-                console.error('复制到剪贴板失败:', error);
+                console.error('获取远程内容失败:', error);
                 this.showStatus('操作失败: ' + error.message, 'error');
             }
         },
 
-        async copyToSystemClipboard(text) {
-            // 尝试使用现代 Clipboard API
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                try {
-                    await navigator.clipboard.writeText(text);
-                    return;
-                } catch (err) {
-                    // 静默失败，尝试备用方案
+        findChatInputBox() {
+            // ChatGPT的输入框选择器（可能需要根据实际情况调整）
+            const selectors = [
+                '#prompt-textarea',
+                'textarea[placeholder*="Message"]',
+                'textarea[data-id="root"]',
+                'div[contenteditable="true"]',
+                'textarea'
+            ];
+
+            for (const selector of selectors) {
+                const element = document.querySelector(selector);
+                if (element) {
+                    return element;
                 }
             }
 
-            // 备用方案：使用传统方法
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            textarea.style.top = '-9999px';
-            document.body.appendChild(textarea);
+            return null;
+        },
 
-            try {
-                textarea.select();
-                textarea.setSelectionRange(0, text.length);
-                const successful = document.execCommand('copy');
-
-                if (!successful) {
-                    throw new Error('复制失败');
-                }
-            } finally {
-                document.body.removeChild(textarea);
+        insertTextToInput(inputElement, text) {
+            // 处理不同类型的输入框
+            if (inputElement.tagName === 'TEXTAREA' || inputElement.tagName === 'INPUT') {
+                inputElement.value = text;
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inputElement.focus();
+            } else if (inputElement.contentEditable === 'true') {
+                inputElement.textContent = text;
+                inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+                inputElement.focus();
             }
         },
 
@@ -1256,7 +1267,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.7.8',
+                    version: '1.7.9',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
