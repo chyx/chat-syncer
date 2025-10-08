@@ -17,6 +17,7 @@ function initialize() {
             break;
         case 'supabase':
             SupabaseModule.init();
+            PageUploaderModule.init();
             break;
         default:
             // For all other pages, only initialize PageUploaderModule
