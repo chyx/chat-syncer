@@ -170,7 +170,7 @@ const UIHelpers = {
         dragHandle.textContent = '⋮⋮';
         dragHandle.style.cssText = `
             position: absolute;
-            top: -8px;
+            bottom: -8px;
             left: -8px;
             width: 24px;
             height: 24px;
