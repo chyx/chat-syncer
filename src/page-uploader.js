@@ -257,10 +257,11 @@ const PageUploaderModule = {
                 });
             });
 
-            // Copy URL to clipboard
+            // Copy formatted text to clipboard
             try {
-                await navigator.clipboard.writeText(pageUrl);
-                this.showUploadStatus('✅ 上传成功！URL 已复制到剪贴板', 'success');
+                const clipboardText = `[In Uploaded Table: ${pageUrl}]`;
+                await navigator.clipboard.writeText(clipboardText);
+                this.showUploadStatus('✅ 上传成功！已复制到剪贴板', 'success');
             } catch (clipboardError) {
                 console.warn('Failed to copy to clipboard:', clipboardError);
                 this.showUploadStatus('✅ 上传成功！', 'success');
