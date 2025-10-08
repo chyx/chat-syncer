@@ -14,16 +14,17 @@ function initialize() {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
             ChatGPTModule.init();
+            PageUploaderModule.init();
             break;
         case 'supabase':
+            // Supabase module includes its own unified button container
+            // with upload page functionality built-in
             SupabaseModule.init();
             break;
         default:
             console.log('通用页面');
+            PageUploaderModule.init();
     }
-
-    // Page Uploader is available on ALL pages
-    PageUploaderModule.init();
 }
 
 // Start initialization

@@ -41,7 +41,7 @@ const SupabaseModule = {
     ConfigUI: {
         createConfigButton() {
             // Create container for buttons
-            const container = UIHelpers.createButtonContainer({ top: '20px', right: '20px' });
+            const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
             container.id = 'supabase-config-button-container';
 
             // Create config button
@@ -52,15 +52,53 @@ const SupabaseModule = {
                 color: 'green'
             });
             configButton.style.position = 'relative';
-            configButton.style.maxWidth = '200px';
+            configButton.style.minWidth = '180px';
+            configButton.style.textAlign = 'center';
+            configButton.style.fontWeight = '600';
+
+            // Create upload page button (if PageUploaderModule is available)
+            let uploadButton = null;
+            if (typeof PageUploaderModule !== 'undefined') {
+                uploadButton = UIHelpers.createButton({
+                    text: '📤 Upload Page',
+                    onClick: () => PageUploaderModule.uploadPage(),
+                    position: {},
+                    color: 'blue'
+                });
+                uploadButton.style.position = 'relative';
+                uploadButton.style.minWidth = '180px';
+                uploadButton.style.textAlign = 'center';
+                uploadButton.style.fontWeight = '600';
+                UIHelpers.makeButtonHoverable(uploadButton);
+            }
+
+            // Create paste button (if available)
+            let pasteButton = null;
+            if (typeof ChatGPTModule !== 'undefined' && ChatGPTModule.UI && ChatGPTModule.UI.createPasteButton) {
+                pasteButton = ChatGPTModule.UI.createPasteButton();
+                pasteButton.style.minWidth = '180px';
+                pasteButton.style.textAlign = 'center';
+                pasteButton.style.fontWeight = '600';
+            }
 
             // Create update script button (hover to show)
             const updateButton = UIHelpers.createUpdateScriptButton();
+            updateButton.style.minWidth = '180px';
+            updateButton.style.textAlign = 'center';
+            updateButton.style.fontWeight = '600';
+
+            // Collect all hoverable buttons
+            const hoverButtons = [updateButton];
+            if (uploadButton) hoverButtons.push(uploadButton);
+            if (pasteButton) hoverButtons.push(pasteButton);
 
             // Setup hover behavior
-            UIHelpers.setupHoverBehavior(container, [updateButton]);
+            UIHelpers.setupHoverBehavior(container, hoverButtons);
 
+            // Add buttons to container
             container.appendChild(configButton);
+            if (uploadButton) container.appendChild(uploadButton);
+            if (pasteButton) container.appendChild(pasteButton);
             container.appendChild(updateButton);
 
             return container;

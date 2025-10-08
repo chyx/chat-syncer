@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.8.5
+// @version      1.8.6
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.8.5';
+    const SCRIPT_VERSION = '1.8.6';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -1351,7 +1351,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.5',
+                    version: '1.8.6',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -1559,7 +1559,7 @@ const SupabaseModule = {
     ConfigUI: {
         createConfigButton() {
             // Create container for buttons
-            const container = UIHelpers.createButtonContainer({ top: '20px', right: '20px' });
+            const container = UIHelpers.createButtonContainer({ bottom: '20px', right: '20px' });
             container.id = 'supabase-config-button-container';
 
             // Create config button
@@ -1570,15 +1570,53 @@ const SupabaseModule = {
                 color: 'green'
             });
             configButton.style.position = 'relative';
-            configButton.style.maxWidth = '200px';
+            configButton.style.minWidth = '180px';
+            configButton.style.textAlign = 'center';
+            configButton.style.fontWeight = '600';
+
+            // Create upload page button (if PageUploaderModule is available)
+            let uploadButton = null;
+            if (typeof PageUploaderModule !== 'undefined') {
+                uploadButton = UIHelpers.createButton({
+                    text: '📤 Upload Page',
+                    onClick: () => PageUploaderModule.uploadPage(),
+                    position: {},
+                    color: 'blue'
+                });
+                uploadButton.style.position = 'relative';
+                uploadButton.style.minWidth = '180px';
+                uploadButton.style.textAlign = 'center';
+                uploadButton.style.fontWeight = '600';
+                UIHelpers.makeButtonHoverable(uploadButton);
+            }
+
+            // Create paste button (if available)
+            let pasteButton = null;
+            if (typeof ChatGPTModule !== 'undefined' && ChatGPTModule.UI && ChatGPTModule.UI.createPasteButton) {
+                pasteButton = ChatGPTModule.UI.createPasteButton();
+                pasteButton.style.minWidth = '180px';
+                pasteButton.style.textAlign = 'center';
+                pasteButton.style.fontWeight = '600';
+            }
 
             // Create update script button (hover to show)
             const updateButton = UIHelpers.createUpdateScriptButton();
+            updateButton.style.minWidth = '180px';
+            updateButton.style.textAlign = 'center';
+            updateButton.style.fontWeight = '600';
+
+            // Collect all hoverable buttons
+            const hoverButtons = [updateButton];
+            if (uploadButton) hoverButtons.push(uploadButton);
+            if (pasteButton) hoverButtons.push(pasteButton);
 
             // Setup hover behavior
-            UIHelpers.setupHoverBehavior(container, [updateButton]);
+            UIHelpers.setupHoverBehavior(container, hoverButtons);
 
+            // Add buttons to container
             container.appendChild(configButton);
+            if (uploadButton) container.appendChild(uploadButton);
+            if (pasteButton) container.appendChild(pasteButton);
             container.appendChild(updateButton);
 
             return container;
@@ -2444,16 +2482,17 @@ function initialize() {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
             ChatGPTModule.init();
+            PageUploaderModule.init();
             break;
         case 'supabase':
+            // Supabase module includes its own unified button container
+            // with upload page functionality built-in
             SupabaseModule.init();
             break;
         default:
             console.log('通用页面');
+            PageUploaderModule.init();
     }
-
-    // Page Uploader is available on ALL pages
-    PageUploaderModule.init();
 }
 
 // Start initialization
