@@ -575,8 +575,9 @@ const PageUploaderModule = {
         }
 
         // Check if button should be visible on page load (per-domain)
+        // Default to true - button is ON by default
         const storageKey = this.getStorageKey();
-        const isVisible = GM_getValue(storageKey, false);
+        const isVisible = GM_getValue(storageKey, true);
         const domain = this.getCurrentDomain();
 
         if (isVisible) {

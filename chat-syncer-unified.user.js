@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.8.4
+// @version      1.8.5
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.8.4';
+    const SCRIPT_VERSION = '1.8.5';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -1351,7 +1351,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.8.4',
+                    version: '1.8.5',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -2397,8 +2397,9 @@ const PageUploaderModule = {
         }
 
         // Check if button should be visible on page load (per-domain)
+        // Default to true - button is ON by default
         const storageKey = this.getStorageKey();
-        const isVisible = GM_getValue(storageKey, false);
+        const isVisible = GM_getValue(storageKey, true);
         const domain = this.getCurrentDomain();
 
         if (isVisible) {
@@ -2438,21 +2439,21 @@ function initialize() {
 
     const pageType = PageDetector.getCurrentPageType();
 
+    // Initialize page-specific modules
     switch (pageType) {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
             ChatGPTModule.init();
-            PageUploaderModule.init();
             break;
         case 'supabase':
             SupabaseModule.init();
-            PageUploaderModule.init();
             break;
         default:
-            // For all other pages, only initialize PageUploaderModule
-            PageUploaderModule.init();
-            console.log('通用页面，已启用 Page Uploader 功能');
+            console.log('通用页面');
     }
+
+    // Page Uploader is available on ALL pages
+    PageUploaderModule.init();
 }
 
 // Start initialization

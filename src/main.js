@@ -9,21 +9,21 @@ function initialize() {
 
     const pageType = PageDetector.getCurrentPageType();
 
+    // Initialize page-specific modules
     switch (pageType) {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
             ChatGPTModule.init();
-            PageUploaderModule.init();
             break;
         case 'supabase':
             SupabaseModule.init();
-            PageUploaderModule.init();
             break;
         default:
-            // For all other pages, only initialize PageUploaderModule
-            PageUploaderModule.init();
-            console.log('通用页面，已启用 Page Uploader 功能');
+            console.log('通用页面');
     }
+
+    // Page Uploader is available on ALL pages
+    PageUploaderModule.init();
 }
 
 // Start initialization
