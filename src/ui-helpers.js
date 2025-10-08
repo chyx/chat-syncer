@@ -162,6 +162,35 @@ const UIHelpers = {
             display: flex;
             flex-direction: column-reverse;
             gap: 12px;
+            cursor: move;
+        `;
+
+        // Add drag handle
+        const dragHandle = document.createElement('div');
+        dragHandle.textContent = '⋮⋮';
+        dragHandle.style.cssText = `
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #6b7280;
+            color: white;
+            border: 2px solid white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
         `;
 
         // Add close button
@@ -195,19 +224,94 @@ const UIHelpers = {
             container.remove();
         };
 
-        // Show close button on hover
+        // Show drag handle and close button on hover
+        let hoverTimeout;
         container.addEventListener('mouseenter', () => {
-            setTimeout(() => {
+            hoverTimeout = setTimeout(() => {
+                dragHandle.style.opacity = '1';
+                dragHandle.style.visibility = 'visible';
                 closeButton.style.opacity = '1';
                 closeButton.style.visibility = 'visible';
             }, 300);
         });
 
         container.addEventListener('mouseleave', () => {
+            clearTimeout(hoverTimeout);
+            dragHandle.style.opacity = '0';
+            dragHandle.style.visibility = 'hidden';
             closeButton.style.opacity = '0';
             closeButton.style.visibility = 'hidden';
         });
 
+        // Make container draggable
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+
+        const dragStart = (e) => {
+            // Get initial mouse position
+            if (e.type === 'touchstart') {
+                initialX = e.touches[0].clientX;
+                initialY = e.touches[0].clientY;
+            } else {
+                initialX = e.clientX;
+                initialY = e.clientY;
+            }
+
+            // Get current container position
+            const rect = container.getBoundingClientRect();
+            currentX = rect.left;
+            currentY = rect.top;
+
+            isDragging = true;
+            container.style.transition = 'none';
+        };
+
+        const drag = (e) => {
+            if (!isDragging) return;
+
+            e.preventDefault();
+
+            let clientX, clientY;
+            if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const deltaX = clientX - initialX;
+            const deltaY = clientY - initialY;
+
+            const newX = currentX + deltaX;
+            const newY = currentY + deltaY;
+
+            // Remove bottom/right positioning and use top/left instead
+            container.style.bottom = 'auto';
+            container.style.right = 'auto';
+            container.style.left = `${newX}px`;
+            container.style.top = `${newY}px`;
+        };
+
+        const dragEnd = () => {
+            isDragging = false;
+            container.style.transition = '';
+        };
+
+        // Mouse events
+        container.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        // Touch events for mobile
+        container.addEventListener('touchstart', dragStart);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('touchend', dragEnd);
+
+        container.appendChild(dragHandle);
         container.appendChild(closeButton);
 
         return container;
