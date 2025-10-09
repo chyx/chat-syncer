@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ChatGPT Supabase Syncer (Unified)
 // @namespace    http://tampermonkey.net/
-// @version      1.9.0
+// @version      1.9.1
 // @updateURL    https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @downloadURL  https://raw.githubusercontent.com/chyx/chat-syncer/refs/heads/main/chat-syncer-unified.user.js
 // @description  Unified script: Sync ChatGPT conversations to Supabase & Config helper for Supabase dashboard
@@ -17,7 +17,7 @@
     'use strict';
 
     // Injected version number
-    const SCRIPT_VERSION = '1.9.0';
+    const SCRIPT_VERSION = '1.9.1';
 
 // ===============================
 // SHARED CONFIGURATION & UTILITIES
@@ -536,9 +536,9 @@ const ChatGPTModule = {
     // UI Components
     UI: {
         addButtonsToContainer(container) {
-            // 主按钮：批量同步最近20条（主页和对话页统一）
+            // 主按钮：批量同步最近20条（主页和对话页统一）- 始终显示
             const quickButton = UIHelpers.createButton({
-                text: '📚 批量同步最近20条',
+                text: '📚 批量同步',
                 onClick: () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20),
                 position: {},
                 color: 'purple'
@@ -1359,7 +1359,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.9.0',
+                    version: '1.9.1',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time
@@ -2259,7 +2259,7 @@ const PageUploaderModule = {
     },
 
     // Add upload button to the provided container
-    async addButtonsToContainer(container) {
+    async addButtonsToContainer(container, isMainButton = true) {
 
         // Create upload button
         const uploadButton = UIHelpers.createButton({
@@ -2275,6 +2275,14 @@ const PageUploaderModule = {
         uploadButton.style.position = 'relative';
         uploadButton.style.bottom = 'auto';
         uploadButton.style.right = 'auto';
+        uploadButton.style.minWidth = '180px';
+        uploadButton.style.textAlign = 'center';
+        uploadButton.style.fontWeight = '600';
+
+        // If not main button, make it hoverable
+        if (!isMainButton) {
+            UIHelpers.makeButtonHoverable(uploadButton);
+        }
 
         // Add loading indicator
         const timeLabel = document.createElement('span');
@@ -2301,10 +2309,16 @@ const PageUploaderModule = {
         let pasteButton = null;
         if (typeof ChatGPTModule !== 'undefined' && ChatGPTModule.UI && ChatGPTModule.UI.createPasteButton) {
             pasteButton = ChatGPTModule.UI.createPasteButton();
+            pasteButton.style.minWidth = '180px';
+            pasteButton.style.textAlign = 'center';
+            pasteButton.style.fontWeight = '600';
         }
 
         // Collect all hoverable buttons for return
         const hoverButtons = [];
+        if (!isMainButton) {
+            hoverButtons.push(uploadButton); // Upload is hoverable when not main
+        }
         if (pasteButton) {
             hoverButtons.push(pasteButton);
         }
@@ -2414,10 +2428,13 @@ const PageUploaderModule = {
     },
 
     // Initialize the page uploader
-    async init(container) {
+    async init(container, isMainButton = true) {
         // Register Tampermonkey menu command to toggle button
         if (typeof GM_registerMenuCommand !== 'undefined') {
-            GM_registerMenuCommand('Toggle Upload Button', () => {
+            const menuText = isMainButton
+                ? 'Toggle Page Uploader (Main Button)'
+                : 'Toggle Page Uploader (Hover Menu)';
+            GM_registerMenuCommand(menuText, () => {
                 this.toggleUploadButton();
             });
         }
@@ -2438,13 +2455,13 @@ const PageUploaderModule = {
         if (document.readyState === 'loading') {
             return new Promise((resolve) => {
                 document.addEventListener('DOMContentLoaded', async () => {
-                    const hoverButtons = await this.addButtonsToContainer(container);
+                    const hoverButtons = await this.addButtonsToContainer(container, isMainButton);
                     this.startMonitoring();
                     resolve(hoverButtons);
                 });
             });
         } else {
-            const hoverButtons = await this.addButtonsToContainer(container);
+            const hoverButtons = await this.addButtonsToContainer(container, isMainButton);
             this.startMonitoring();
             return hoverButtons;
         }
@@ -2483,12 +2500,12 @@ async function initialize() {
     switch (pageType) {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
-            // Add ChatGPT-specific buttons
+            // ChatGPT: Main = Batch Sync, Hover = Custom Sync + Upload + Paste + Update
             const chatgptButtons = ChatGPTModule.init(container);
             if (chatgptButtons) allHoverButtons.push(...chatgptButtons);
 
-            // Add PageUploader buttons
-            const uploaderButtons = await PageUploaderModule.init(container);
+            // Add PageUploader buttons (Upload will be hoverable on ChatGPT pages)
+            const uploaderButtons = await PageUploaderModule.init(container, false); // false = not main button
             if (uploaderButtons) allHoverButtons.push(...uploaderButtons);
             break;
 
@@ -2499,8 +2516,8 @@ async function initialize() {
 
         default:
             console.log('通用页面');
-            // Only PageUploader buttons
-            const defaultButtons = await PageUploaderModule.init(container);
+            // Other pages: Main = Upload, Hover = Paste + Update
+            const defaultButtons = await PageUploaderModule.init(container, true); // true = is main button
             if (defaultButtons) allHoverButtons.push(...defaultButtons);
     }
 
@@ -2534,6 +2551,7 @@ if (typeof global !== 'undefined' && global.process && global.process.env) {
     global.ChatGPTModule = ChatGPTModule;
     global.SupabaseModule = SupabaseModule;
     global.PageUploaderModule = PageUploaderModule;
+    global.UIHelpers = UIHelpers;
 
     // Legacy compatibility for old tests
     global.UI = ChatGPTModule.UI;

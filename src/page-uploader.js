@@ -400,7 +400,7 @@ const PageUploaderModule = {
     },
 
     // Add upload button to the provided container
-    async addButtonsToContainer(container) {
+    async addButtonsToContainer(container, isMainButton = true) {
 
         // Create upload button
         const uploadButton = UIHelpers.createButton({
@@ -416,6 +416,14 @@ const PageUploaderModule = {
         uploadButton.style.position = 'relative';
         uploadButton.style.bottom = 'auto';
         uploadButton.style.right = 'auto';
+        uploadButton.style.minWidth = '180px';
+        uploadButton.style.textAlign = 'center';
+        uploadButton.style.fontWeight = '600';
+
+        // If not main button, make it hoverable
+        if (!isMainButton) {
+            UIHelpers.makeButtonHoverable(uploadButton);
+        }
 
         // Add loading indicator
         const timeLabel = document.createElement('span');
@@ -442,10 +450,16 @@ const PageUploaderModule = {
         let pasteButton = null;
         if (typeof ChatGPTModule !== 'undefined' && ChatGPTModule.UI && ChatGPTModule.UI.createPasteButton) {
             pasteButton = ChatGPTModule.UI.createPasteButton();
+            pasteButton.style.minWidth = '180px';
+            pasteButton.style.textAlign = 'center';
+            pasteButton.style.fontWeight = '600';
         }
 
         // Collect all hoverable buttons for return
         const hoverButtons = [];
+        if (!isMainButton) {
+            hoverButtons.push(uploadButton); // Upload is hoverable when not main
+        }
         if (pasteButton) {
             hoverButtons.push(pasteButton);
         }
@@ -555,10 +569,13 @@ const PageUploaderModule = {
     },
 
     // Initialize the page uploader
-    async init(container) {
+    async init(container, isMainButton = true) {
         // Register Tampermonkey menu command to toggle button
         if (typeof GM_registerMenuCommand !== 'undefined') {
-            GM_registerMenuCommand('Toggle Upload Button', () => {
+            const menuText = isMainButton
+                ? 'Toggle Page Uploader (Main Button)'
+                : 'Toggle Page Uploader (Hover Menu)';
+            GM_registerMenuCommand(menuText, () => {
                 this.toggleUploadButton();
             });
         }
@@ -579,13 +596,13 @@ const PageUploaderModule = {
         if (document.readyState === 'loading') {
             return new Promise((resolve) => {
                 document.addEventListener('DOMContentLoaded', async () => {
-                    const hoverButtons = await this.addButtonsToContainer(container);
+                    const hoverButtons = await this.addButtonsToContainer(container, isMainButton);
                     this.startMonitoring();
                     resolve(hoverButtons);
                 });
             });
         } else {
-            const hoverButtons = await this.addButtonsToContainer(container);
+            const hoverButtons = await this.addButtonsToContainer(container, isMainButton);
             this.startMonitoring();
             return hoverButtons;
         }

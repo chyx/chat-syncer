@@ -6,9 +6,9 @@ const ChatGPTModule = {
     // UI Components
     UI: {
         addButtonsToContainer(container) {
-            // 主按钮：批量同步最近20条（主页和对话页统一）
+            // 主按钮：批量同步最近20条（主页和对话页统一）- 始终显示
             const quickButton = UIHelpers.createButton({
-                text: '📚 批量同步最近20条',
+                text: '📚 批量同步',
                 onClick: () => ChatGPTModule.BatchSyncer.startBatchSync(0, 20),
                 position: {},
                 color: 'purple'
@@ -829,7 +829,7 @@ const ChatGPTModule = {
                         height: window.innerHeight
                     },
                     source: 'batch_sync',
-                    version: '1.9.0',
+                    version: '1.9.1',
                     batch_sync: true,
                     conversation_create_time: conversationInfo.create_time,
                     conversation_update_time: conversationInfo.update_time

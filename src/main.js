@@ -17,12 +17,12 @@ async function initialize() {
     switch (pageType) {
         case 'chatgpt_home':
         case 'chatgpt_conversation':
-            // Add ChatGPT-specific buttons
+            // ChatGPT: Main = Batch Sync, Hover = Custom Sync + Upload + Paste + Update
             const chatgptButtons = ChatGPTModule.init(container);
             if (chatgptButtons) allHoverButtons.push(...chatgptButtons);
 
-            // Add PageUploader buttons
-            const uploaderButtons = await PageUploaderModule.init(container);
+            // Add PageUploader buttons (Upload will be hoverable on ChatGPT pages)
+            const uploaderButtons = await PageUploaderModule.init(container, false); // false = not main button
             if (uploaderButtons) allHoverButtons.push(...uploaderButtons);
             break;
 
@@ -33,8 +33,8 @@ async function initialize() {
 
         default:
             console.log('通用页面');
-            // Only PageUploader buttons
-            const defaultButtons = await PageUploaderModule.init(container);
+            // Other pages: Main = Upload, Hover = Paste + Update
+            const defaultButtons = await PageUploaderModule.init(container, true); // true = is main button
             if (defaultButtons) allHoverButtons.push(...defaultButtons);
     }
 
@@ -68,6 +68,7 @@ if (typeof global !== 'undefined' && global.process && global.process.env) {
     global.ChatGPTModule = ChatGPTModule;
     global.SupabaseModule = SupabaseModule;
     global.PageUploaderModule = PageUploaderModule;
+    global.UIHelpers = UIHelpers;
 
     // Legacy compatibility for old tests
     global.UI = ChatGPTModule.UI;
